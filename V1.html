@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AJASDK V1 — Implémentation</title>
+  <style>
+    :root { --bg:#f4f5f7; --card:#fff; --ink:#12141a; --muted:#5c6570; --line:#e4e7ec; --navy:#0b1f3a; --accent:#18706b; --ok:#1b7f4e; --codebg:#0f1720; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin:0; font:16px/1.55 "Segoe UI", system-ui, sans-serif; color:var(--ink); background:var(--bg); }
+    .layout { display:grid; grid-template-columns:250px 1fr; min-height:100vh; }
+    nav { background:var(--navy); color:#d7dee8; padding:28px 18px; position:sticky; top:0; height:100vh; overflow:auto; }
+    nav h1 { color:#fff; font-size:18px; margin:0 0 4px; }
+    nav .tag { font-size:12px; color:#8aa0b8; margin-bottom:20px; }
+    nav a { display:block; color:#c5d0dc; text-decoration:none; padding:6px 8px; border-radius:6px; font-size:13px; }
+    nav a:hover { background:#163154; color:#fff; }
+    main { max-width:920px; padding:40px 48px 80px; }
+    h2 { font-size:22px; margin:44px 0 10px; }
+    h3 { font-size:17px; margin:26px 0 8px; }
+    .muted { color:var(--muted); font-size:14px; }
+    table { width:100%; border-collapse:collapse; background:var(--card); font-size:14px; margin:12px 0 20px; }
+    th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+    th { background:#eef1f5; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+    code { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; background:#eef1f5; padding:1px 5px; border-radius:4px; }
+    pre { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; background:var(--codebg); color:#e8eef5; padding:14px 16px; border-radius:10px; overflow:auto; line-height:1.45; }
+    .callout { border-left:4px solid var(--accent); background:#e8f3f2; padding:12px 14px; border-radius:0 8px 8px 0; margin:16px 0; }
+    .warn { border-left-color:#9a6700; background:#fff8e6; }
+    .pill { display:inline-block; font-size:12px; font-weight:650; padding:2px 8px; border-radius:999px; background:#e6f6ee; color:var(--ok); }
+    footer { margin-top:40px; color:var(--muted); font-size:13px; }
+    @media (max-width:860px) { .layout{grid-template-columns:1fr;} nav{position:relative;height:auto;} main{padding:24px 18px 60px;} }
+  </style>
+</head>
+<body>
+<div class="layout">
+<nav>
+  <h1>AJASDK</h1>
+  <div class="tag">V1 · client PHP</div>
+  <a href="../V1.html">← Document global</a>
+  <a href="#role">Rôle</a>
+  <a href="#principe">Principe</a>
+  <a href="#api">Surface PHP</a>
+  <a href="#site">Intégration site existant</a>
+  <a href="#poll">Poll / cron</a>
+  <a href="#erreurs">Erreurs / retries</a>
+  <a href="#paquet">Paquet</a>
+  <a href="#hors">Hors V1</a>
+  <a href="#fin">Critère de fin</a>
+</nav>
+<main>
+<p class="pill">Implémentation V1</p>
+<h2 style="margin-top:12px">AJASDK — spécification d’implémentation</h2>
+<p>Bibliothèque PHP mince. Elle n’accède pas à la base du site, n’expose aucun webhook, n’implémente aucun statut métier. Elle envoie et reçoit du JSON vers AJABACKEND. Le plugin Woo (<a href="../AJACONNECTOR/V1.html">AJACONNECTOR</a>) <strong>doit</strong> dépendre de ce client pour ne pas dupliquer HTTP.</p>
+
+<div class="callout warn">
+  <strong>Sens de l’intégration.</strong> Un site déjà déployé n’ouvre pas son API à AJA. Le développeur du site appelle AJA (ce SDK) depuis son checkout et depuis un cron. Node/Python : pas de SDK V1, ils recopient les 4 routes (voir AJABACKEND).
+</div>
+
+<h2 id="role">1. Rôle fonctionnel</h2>
+<ul>
+  <li><code>orders.create</code> / <code>orders.update</code> — pousser une commande ou une MAJ née sur le site.</li>
+  <li><code>commands.pending</code> — lire la file.</li>
+  <li><code>commands.ack</code> — confirmer ou refuser une action.</li>
+  <li>Retries idempotents sur 429 / 5xx, timeout, JSON error mapping.</li>
+</ul>
+
+<h2 id="principe">2. Principe technique</h2>
+<table>
+  <tr><th>Sujet</th><th>Décision V1</th></tr>
+  <tr><td>Langage</td><td>PHP 8.1+, typé, namespace <code>Aja\</code></td></tr>
+  <tr><td>HTTP</td><td>ext-curl uniquement (classe <code>CurlHttpClient</code>). Pas de Guzzle.</td></tr>
+  <tr><td>Auth</td><td>Header <code>Authorization: Bearer {apiKey}</code></td></tr>
+  <tr><td>Base URL</td><td>constructeur, défaut <code>https://api.aja.app</code></td></tr>
+  <tr><td>Clé</td><td>jamais loggée. Jamais envoyée au navigateur. Fichier serveur / wp-config / env.</td></tr>
+  <tr><td>Types inconnus</td><td><code>pending()</code> retourne tout ; le site ignore <code>type !== order.transition</code></td></tr>
+</table>
+
+<h2 id="api">3. Surface publique</h2>
+<pre>use Aja\Client;
+use Aja\Dto\OrderInput;
+
+$aja = new Client(
+    apiKey: getenv('AJA_KEY'),
+    baseUrl: getenv('AJA_URL') ?: 'https://api.aja.app'
+);
+
+$aja-&gt;orders()-&gt;create(new OrderInput(
+    externalId: (string) $commande-&gt;id,
+    status: 'new',
+    allowedNext: ['confirmed', 'cancelled'],
+    paymentStatus: 'pending',
+    paymentMode: 'cod',
+    total: 15000,               // entier
+    currency: 'XOF',
+    customer: [
+        'name'  =&gt; $commande-&gt;client_nom,
+        'phone' =&gt; $commande-&gt;client_tel,
+        'email' =&gt; $commande-&gt;client_email,
+    ],
+    lines: [
+        ['name' =&gt; 'Pagne', 'quantity' =&gt; 1, 'unit_price' =&gt; 15000, 'extras' =&gt; []],
+    ],
+    extras: ['quartier' =&gt; 'Plateau'],
+));
+
+$aja-&gt;orders()-&gt;update('882', [
+    'status' =&gt; 'confirmed',
+    'allowed_next' =&gt; ['preparing', 'cancelled'],
+    'payment_status' =&gt; 'paid',
+]);
+
+foreach ($aja-&gt;commands()-&gt;pending() as $cmd) {
+    if ($cmd-&gt;type !== 'order.transition') {
+        continue;
+    }
+    try {
+        $monSite-&gt;changerStatut($cmd-&gt;externalId, $cmd-&gt;payload['status']);
+        $aja-&gt;commands()-&gt;ack($cmd-&gt;id, ok: true, status: $cmd-&gt;payload['status'], allowedNext: $monSite-&gt;prochainsStatuts($cmd-&gt;externalId));
+    } catch (DomainReject $e) {
+        $aja-&gt;commands()-&gt;ack($cmd-&gt;id, ok: false, reason: $e-&gt;getMessage());
+    }
+}</pre>
+
+<h3>Classes</h3>
+<table>
+  <tr><th>Classe</th><th>Responsabilité</th></tr>
+  <tr><td><code>Client</code></td><td>Config, factories <code>orders()</code> <code>commands()</code></td></tr>
+  <tr><td><code>OrdersApi</code></td><td>POST /v1/orders, PATCH /v1/orders/{external_id}</td></tr>
+  <tr><td><code>CommandsApi</code></td><td>GET /v1/commands, POST /v1/commands/{id}/ack</td></tr>
+  <tr><td><code>Dto\OrderInput</code></td><td>validation locale minimale (total int, lines non vide)</td></tr>
+  <tr><td><code>Dto\Command</code></td><td>id, type, externalId, payload, createdAt</td></tr>
+  <tr><td><code>Exception\ApiException</code></td><td><code>httpStatus</code>, <code>code</code> AJA, message</td></tr>
+  <tr><td><code>Exception\NetworkException</code></td><td>timeout, DNS</td></tr>
+</table>
+<p>Pas de <code>onOrderStatusChange</code> inverse : le SDK ne reçoit pas de trafic inbound. Le site poll.</p>
+
+<h2 id="site">4. Ce que le développeur d’un site déjà en prod écrit</h2>
+<ol>
+  <li>Composer (ou copie du dossier <code>src/</code> si pas de Composer) + env <code>AJA_KEY</code>.</li>
+  <li><strong>Un appel</strong> après l’INSERT commande existant — ne pas remplacer leur modèle.</li>
+  <li><strong>Un cron</strong> (crontab <code>*/1 * * * *</code> ou équivalent) vers un script <code>bin/aja-poll.php</code> d’<strong>exemple</strong> fourni, qu’ils branchent sur <em>leur</em> <code>changerStatut</code>.</li>
+  <li>Quand <em>leur</em> admin change un statut : <code>orders()-&gt;update</code>.</li>
+</ol>
+<p>Fichiers d’exemple à livrer :</p>
+<pre>examples/
+  checkout-hook.php     # 15 lignes à coller
+  cron-poll.php         # boucle pending + TODO métier
+  status-from-admin.php</pre>
+<p>La doc narrative pour humains est aussi sur AJAWEB. Le SDK reste la source des signatures.</p>
+
+<h2 id="poll">5. Poll — règles</h2>
+<ul>
+  <li>Timeout HTTP 10 s. Retry 3 fois, backoff 200 ms × 2, seulement GET pending et POST orders (idempotent). Ack : retry si réseau, pas si 409 (déjà acked).</li>
+  <li>Ne pas ACK avant le succès métier local. Si le cron crash après update local et avant ack, le prochain poll représentera la même command : leur <code>changerStatut</code> doit être <strong>idempotent</strong> (même statut = no-op).</li>
+  <li>User-Agent : <code>aja-php-sdk/1.0</code>.</li>
+</ul>
+
+<h2 id="erreurs">6. Mapping d’erreurs</h2>
+<table>
+  <tr><th>HTTP</th><th>Exception</th></tr>
+  <tr><td>401</td><td>ApiException INVALID_KEY — clé à corriger, ne pas retry en boucle</td></tr>
+  <tr><td>400 VALIDATION</td><td>ApiException, message backend</td></tr>
+  <tr><td>404</td><td>PATCH d’une commande inconnue</td></tr>
+  <tr><td>429 / 5xx</td><td>retry puis Network/ApiException</td></tr>
+</table>
+<p>Le checkout du site ne doit <strong>pas</strong> échouer si AJA est down : catch, log, optionnellement table locale <code>aja_outbox</code> (hors SDK ; mentionnée en exemple). V1 SDK : throw, l’intégrateur décide. L’exemple checkout-hook capture et log pour ne pas casser la vente.</p>
+
+<h2 id="paquet">7. Paquet et arborescence</h2>
+<pre>AJASDK/
+  composer.json          # name: aja/sdk, php ^8.1
+  src/
+    Client.php
+    Http/CurlHttpClient.php
+    Http/HttpClient.php
+    Api/OrdersApi.php
+    Api/CommandsApi.php
+    Dto/OrderInput.php
+    Dto/Command.php
+    Exception/ApiException.php
+    Exception/NetworkException.php
+  examples/
+  tests/
+    OrdersApiTest.php    # HTTP mock
+  V1.html</pre>
+<p>Version Composer <code>1.0.0</code> alignée API <code>/v1</code>. AJACONNECTOR référence le paquet en path repository local (<code>"aja/sdk": "@dev"</code>) ou copie synchronisée <code>vendor</code> pour distribution WordPress.org (plugin souvent vendu avec lib vendored). Décision V1 : <strong>vendorer</strong> <code>src/</code> dans le plugin sous <code>AJACONNECTOR/includes/sdk/</code> via script de copy CI, pour un zip WP autonome. Le dossier AJASDK reste la source.</p>
+
+<h2 id="hors">8. Hors V1</h2>
+<ul>
+  <li>SDK Node, Python, Go.</li>
+  <li>Handlers inbound <code>onProductCreate</code> (spec initiale) — remplacés par le poll.</li>
+  <li>verifyWebhook HMAC — pas de webhook inbound.</li>
+  <li>Upload d’images, products CRUD.</li>
+</ul>
+<p>Quand un type d’action V2 apparaît, ajouter une constante <code>CommandType::PRODUCT_UPSERT</code> sans casser <code>pending()</code> (liste générique).</p>
+
+<h2 id="fin">9. Critère de fin</h2>
+<ul>
+  <li>Les tests mockés passent pour create, upsert, pending, ack ok/ko.</li>
+  <li>L’exemple cron, branché sur un script PHP local fake, consomme une command créée via l’API app.</li>
+  <li>Le plugin Woo compile/tourne en instanciant <code>Aja\Client</code> — pas un second client HTTP.</li>
+  <li>Un site custom sans Composer peut copier <code>src/</code> et un <code>autoload.php</code> PSR-4 de 10 lignes fourni.</li>
+</ul>
+<footer>AJASDK V1 · contrat HTTP : <a href="../AJABACKEND/V1.html">AJABACKEND</a></footer>
+</main>
+</div>
+</body>
+</html>
