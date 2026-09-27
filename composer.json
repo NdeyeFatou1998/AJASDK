@@ -1,0 +1,19 @@
+{
+  "name": "aja/sdk",
+  "description": "PHP client for the AJA order API. The shop calls AJA; AJA never calls the shop.",
+  "type": "library",
+  "license": "proprietary",
+  "require": {
+    "php": "^8.1",
+    "ext-curl": "*",
+    "ext-json": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Aja\\": "src/"
+    }
+  },
+  "config": {
+    "sort-packages": true
+  }
+}

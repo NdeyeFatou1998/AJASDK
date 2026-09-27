@@ -53,7 +53,7 @@
 <p>Bibliothèque PHP mince. Elle n’accède pas à la base du site, n’expose aucun webhook, n’implémente aucun statut métier. Elle envoie et reçoit du JSON vers AJABACKEND. Le plugin Woo (<a href="../AJACONNECTOR/V1.html">AJACONNECTOR</a>) <strong>doit</strong> dépendre de ce client pour ne pas dupliquer HTTP.</p>
 
 <div class="callout warn">
-  <strong>Sens de l’intégration.</strong> Un site déjà déployé n’ouvre pas son API à AJA. Le développeur du site appelle AJA (ce SDK) depuis son checkout et depuis un cron. Node/Python : pas de SDK V1, ils recopient les 4 routes (voir AJABACKEND).
+  <strong>Sens de l’intégration.</strong> Un site déjà déployé n’ouvre pas son API à AJA. Le développeur du site appelle AJA (ce SDK) depuis son checkout et depuis un cron. Python et Node ont désormais leur propre client, de surface identique : <a href="../AJASDK-PYTHON/README.md">AJASDK-PYTHON</a> et <a href="../AJASDK-NODE/README.md">AJASDK-NODE</a>. Tout autre langage recopie les 4 routes (voir AJABACKEND).
 </div>
 
 <h2 id="role">1. Rôle fonctionnel</h2>
@@ -70,7 +70,7 @@
   <tr><td>Langage</td><td>PHP 8.1+, typé, namespace <code>Aja\</code></td></tr>
   <tr><td>HTTP</td><td>ext-curl uniquement (classe <code>CurlHttpClient</code>). Pas de Guzzle.</td></tr>
   <tr><td>Auth</td><td>Header <code>Authorization: Bearer {apiKey}</code></td></tr>
-  <tr><td>Base URL</td><td>constructeur, défaut <code>https://api.aja.app</code></td></tr>
+  <tr><td>Base URL</td><td>constructeur, défaut <code>https://ajabackend-production.up.railway.app</code></td></tr>
   <tr><td>Clé</td><td>jamais loggée. Jamais envoyée au navigateur. Fichier serveur / wp-config / env.</td></tr>
   <tr><td>Types inconnus</td><td><code>pending()</code> retourne tout ; le site ignore <code>type !== order.transition</code></td></tr>
 </table>
@@ -81,7 +81,7 @@ use Aja\Dto\OrderInput;
 
 $aja = new Client(
     apiKey: getenv('AJA_KEY'),
-    baseUrl: getenv('AJA_URL') ?: 'https://api.aja.app'
+    baseUrl: getenv('AJA_URL') ?: 'https://ajabackend-production.up.railway.app'
 );
 
 $aja-&gt;orders()-&gt;create(new OrderInput(
@@ -156,14 +156,15 @@ foreach ($aja-&gt;commands()-&gt;pending() as $cmd) {
 </ul>
 
 <h2 id="erreurs">6. Mapping d’erreurs</h2>
+<p>Catalogue : <a href="../ERRORS.html">ERRORS.html</a>. Constantes <code>Aja\ErrorCode</code>. Envelope → <code>ApiException</code> avec <code>getErrorCode()</code>, <code>getRequestId()</code>, <code>getDetails()</code>. Pas de body / timeout → <code>NetworkException</code>. Validation → <code>ValidationException</code> + <code>fields()</code>.</p>
 <table>
-  <tr><th>HTTP</th><th>Exception</th></tr>
-  <tr><td>401</td><td>ApiException INVALID_KEY — clé à corriger, ne pas retry en boucle</td></tr>
-  <tr><td>400 VALIDATION</td><td>ApiException, message backend</td></tr>
-  <tr><td>404</td><td>PATCH d’une commande inconnue</td></tr>
-  <tr><td>429 / 5xx</td><td>retry puis Network/ApiException</td></tr>
+  <tr><th>Cas</th><th>Comportement SDK</th></tr>
+  <tr><td><code>SITE_KEY_INVALID</code> / <code>REVOKED</code></td><td>throw, <strong>zéro retry</strong></td></tr>
+  <tr><td><code>VALIDATION</code>, <code>ORDER_NOT_FOUND</code></td><td>throw, pas de retry</td></tr>
+  <tr><td><code>COMMAND_ALREADY_ACKED</code></td><td>succès (idempotent)</td></tr>
+  <tr><td><code>RATE_LIMITED</code>, 502/503/504, réseau</td><td>retry 3× backoff puis throw</td></tr>
 </table>
-<p>Le checkout du site ne doit <strong>pas</strong> échouer si AJA est down : catch, log, optionnellement table locale <code>aja_outbox</code> (hors SDK ; mentionnée en exemple). V1 SDK : throw, l’intégrateur décide. L’exemple checkout-hook capture et log pour ne pas casser la vente.</p>
+<p>Checkout : catch, log <code>code + request_id</code>, ne pas casser la vente, ne pas echo le message au client boutique. L’intégrateur fait un <code>match</code> sur le code, pas sur le texte anglais.</p>
 
 <h2 id="paquet">7. Paquet et arborescence</h2>
 <pre>AJASDK/
@@ -176,8 +177,10 @@ foreach ($aja-&gt;commands()-&gt;pending() as $cmd) {
     Api/CommandsApi.php
     Dto/OrderInput.php
     Dto/Command.php
+    ErrorCode.php
     Exception/ApiException.php
     Exception/NetworkException.php
+    Exception/ValidationException.php
   examples/
   tests/
     OrdersApiTest.php    # HTTP mock
@@ -186,7 +189,7 @@ foreach ($aja-&gt;commands()-&gt;pending() as $cmd) {
 
 <h2 id="hors">8. Hors V1</h2>
 <ul>
-  <li>SDK Node, Python, Go.</li>
+  <li>SDK Go, Ruby, Java. (Python et Node existent désormais dans leurs propres dossiers ; ce document ne couvre que le client PHP.)</li>
   <li>Handlers inbound <code>onProductCreate</code> (spec initiale) — remplacés par le poll.</li>
   <li>verifyWebhook HMAC — pas de webhook inbound.</li>
   <li>Upload d’images, products CRUD.</li>

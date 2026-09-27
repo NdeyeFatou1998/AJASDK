@@ -1,0 +1,13 @@
+---
+description: AJASDK conventions — PHP client, English PHPDoc
+alwaysApply: true
+---
+
+# AJASDK
+
+Read `CONVENTIONS.html` in this repo.
+
+- PHP 8.1+, `declare(strict_types=1);`, PSR-4 `Aja\`, PSR-12, curl only (no Guzzle).
+- One class per file. English PHPDoc on every public method. Never log the API key.
+- Errors: `ErrorCode` + `ApiException` / `NetworkException`. Retry network and 429/5xx only. `COMMAND_ALREADY_ACKED` is success. Never echo exception messages to shop customers.
+- No merchant DB access. Commits on `dev`: `feat(sdk): ...`.
