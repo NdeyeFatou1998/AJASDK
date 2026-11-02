@@ -21,7 +21,10 @@ tags = ["aja", "key"]
   [[rules.allowlists]]
   description = "La documentation montre des clés tronquées, jamais réelles"
   regexes = [
-    '''aja_(?:live|test)_(…|\.\.\.|x{3,}|X{3,}|<[^>]+>)''',
+    # Une clé tronquée ou nommée — la convention de tout le projet, alignée
+    # sur AJABACKEND : un scénario de conformité a besoin d'une fausse clé,
+    # et la dire « placeholder » suffit à la distinguer d'une vraie.
+    '''(?i)aja_(?:live|test)_(…|\.\.\.|x{3,}|placeholder|exemple|example|fixture|<[^>]+>)''',
   ]
 
 # Le poivre de hachage des clés. Sa valeur réelle ne sort jamais de Railway ;
