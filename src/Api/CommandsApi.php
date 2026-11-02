@@ -24,8 +24,10 @@ final class CommandsApi
      * GET /v1/commands — oldest pending first. Also refreshes last_poll_at,
      * which is what the merchant sees as "dernier appel du site".
      *
-     * Unknown types are returned as-is: the caller skips what it does not know
-     * rather than the SDK hiding it.
+     * Both order.* and product.* arrive here. Unknown types are returned
+     * as-is: the caller refuses what it does not know rather than the SDK
+     * hiding it — and must refuse it, because the queue is FIFO and one
+     * command left pending holds up every command behind it.
      *
      * @return list<Command>
      *
@@ -68,6 +70,10 @@ final class CommandsApi
      * done, which is exactly what the caller wanted.
      *
      * @param list<string> $allowedNext
+     * @param ?string      $externalId the id the shop attributed, when acking
+     *                                 a product.create. Without it AJA drops
+     *                                 the draft and waits for the shop's own
+     *                                 catalogue push to bring the real row.
      *
      * @throws ApiException|NetworkException
      */
@@ -77,6 +83,7 @@ final class CommandsApi
         ?string $status = null,
         array $allowedNext = [],
         ?string $reason = null,
+        ?string $externalId = null,
     ): void {
         $body = ['ok' => $ok];
         if ($status !== null) {
@@ -87,6 +94,9 @@ final class CommandsApi
         }
         if ($reason !== null) {
             $body['reason'] = $reason;
+        }
+        if ($externalId !== null) {
+            $body['external_id'] = $externalId;
         }
 
         try {

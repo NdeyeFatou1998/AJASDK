@@ -23,6 +23,9 @@ final class ErrorCode
     public const ORDER_SYNC_EXPIRED = 'ORDER_SYNC_EXPIRED';
     public const COMMAND_ALREADY_ACKED = 'COMMAND_ALREADY_ACKED';
     public const COMMAND_UNSUPPORTED_TYPE = 'COMMAND_UNSUPPORTED_TYPE';
+    public const PRODUCT_NOT_FOUND = 'PRODUCT_NOT_FOUND';
+    public const PRODUCT_SYNC_PENDING = 'PRODUCT_SYNC_PENDING';
+    public const PRODUCT_SCHEMA_OUTDATED = 'PRODUCT_SCHEMA_OUTDATED';
     public const CONFLICT = 'CONFLICT';
     public const TEST_TRIAL_EXPIRED = 'TEST_TRIAL_EXPIRED';
     public const PROD_NOT_ACTIVE = 'PROD_NOT_ACTIVE';
@@ -44,6 +47,8 @@ final class ErrorCode
         self::COMMAND_NOT_FOUND,
         self::ORDER_TRANSITION_NOT_ALLOWED,
         self::COMMAND_UNSUPPORTED_TYPE,
+        self::PRODUCT_NOT_FOUND,
+        self::PRODUCT_SCHEMA_OUTDATED,
         self::TEST_TRIAL_EXPIRED,
         self::PROD_NOT_ACTIVE,
     ];

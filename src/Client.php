@@ -6,6 +6,7 @@ namespace Aja;
 
 use Aja\Api\CommandsApi;
 use Aja\Api\OrdersApi;
+use Aja\Api\ProductsApi;
 use Aja\Exception\ApiException;
 use Aja\Exception\NetworkException;
 use Aja\Exception\ValidationException;
@@ -30,6 +31,7 @@ final class Client
     private readonly HttpClient $http;
     private readonly OrdersApi $orders;
     private readonly CommandsApi $commands;
+    private readonly ProductsApi $products;
 
     public function __construct(
         private readonly string $apiKey,
@@ -42,6 +44,7 @@ final class Client
         $this->http = $http ?? new CurlHttpClient();
         $this->orders = new OrdersApi($this);
         $this->commands = new CommandsApi($this);
+        $this->products = new ProductsApi($this);
     }
 
     public function orders(): OrdersApi
@@ -52,6 +55,11 @@ final class Client
     public function commands(): CommandsApi
     {
         return $this->commands;
+    }
+
+    public function products(): ProductsApi
+    {
+        return $this->products;
     }
 
     /**
