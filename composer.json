@@ -15,5 +15,13 @@
   },
   "config": {
     "sort-packages": true
+  },
+  "scripts": {
+    "conformance": "php conformance/run.php"
+  },
+  "archive": {
+    "exclude": [
+      "/conformance"
+    ]
   }
 }
