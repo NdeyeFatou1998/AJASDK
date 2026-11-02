@@ -9,16 +9,19 @@ useDefault = true
 # Une vraie clé de site. Volontairement sans échappatoire par chemin : une clé
 # collée dans un README est un accident plausible, et doit être vue.
 [[rules]]
+# Les groupes sont non capturants : gitleaks prend le premier groupe
+# capturant comme secret, et la liste d'exceptions serait alors comparée
+# à « live » plutôt qu'à la clé entière.
 id = "aja-site-key"
 description = "Clé d'API de site AJA"
-regex = '''aja_(live|test)_[A-Za-z0-9_-]{16,}'''
+regex = '''aja_(?:live|test)_[A-Za-z0-9_-]{16,}'''
 keywords = ["aja_live_", "aja_test_"]
 tags = ["aja", "key"]
 
-  [rules.allowlist]
+  [[rules.allowlists]]
   description = "La documentation montre des clés tronquées, jamais réelles"
   regexes = [
-    '''aja_(live|test)_(…|\.\.\.|x{3,}|X{3,}|<[^>]+>)''',
+    '''aja_(?:live|test)_(…|\.\.\.|x{3,}|X{3,}|<[^>]+>)''',
   ]
 
 # Le poivre de hachage des clés. Sa valeur réelle ne sort jamais de Railway ;
@@ -30,7 +33,7 @@ regex = '''API_KEY_PEPPER\s*[:=]\s*["']?[A-Za-z0-9+/_-]{12,}'''
 keywords = ["API_KEY_PEPPER"]
 tags = ["aja", "pepper"]
 
-  [rules.allowlist]
+  [[rules.allowlists]]
   description = "Gabarits et documentation : des marqueurs, pas des secrets"
   paths = [
     '''\.env\.example$''',
