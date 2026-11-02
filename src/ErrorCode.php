@@ -26,6 +26,10 @@ final class ErrorCode
     public const PRODUCT_NOT_FOUND = 'PRODUCT_NOT_FOUND';
     public const PRODUCT_SYNC_PENDING = 'PRODUCT_SYNC_PENDING';
     public const PRODUCT_SCHEMA_OUTDATED = 'PRODUCT_SCHEMA_OUTDATED';
+    /** The merchant edits the form in AJAWEB: the site can no longer replace it. */
+    public const PRODUCT_SCHEMA_LOCKED = 'PRODUCT_SCHEMA_LOCKED';
+    /** The site enforces an IP allow-list and this server's address is not on it. */
+    public const SITE_IP_NOT_ALLOWED = 'SITE_IP_NOT_ALLOWED';
     public const CONFLICT = 'CONFLICT';
     public const TEST_TRIAL_EXPIRED = 'TEST_TRIAL_EXPIRED';
     public const PROD_NOT_ACTIVE = 'PROD_NOT_ACTIVE';
@@ -49,6 +53,8 @@ final class ErrorCode
         self::COMMAND_UNSUPPORTED_TYPE,
         self::PRODUCT_NOT_FOUND,
         self::PRODUCT_SCHEMA_OUTDATED,
+        self::PRODUCT_SCHEMA_LOCKED,
+        self::SITE_IP_NOT_ALLOWED,
         self::TEST_TRIAL_EXPIRED,
         self::PROD_NOT_ACTIVE,
     ];
