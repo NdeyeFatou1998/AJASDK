@@ -1,0 +1,41 @@
+# Règles gitleaks du projet.
+#
+# Les règles par défaut attrapent les secrets du monde entier ; celles-ci
+# attrapent les nôtres. Une clé AJA poussée par mégarde est le scénario décrit
+# au §2 de SECURITY.html — un scanner la trouverait avant nous.
+[extend]
+useDefault = true
+
+# Une vraie clé de site. Volontairement sans échappatoire par chemin : une clé
+# collée dans un README est un accident plausible, et doit être vue.
+[[rules]]
+id = "aja-site-key"
+description = "Clé d'API de site AJA"
+regex = '''aja_(live|test)_[A-Za-z0-9_-]{16,}'''
+keywords = ["aja_live_", "aja_test_"]
+tags = ["aja", "key"]
+
+  [rules.allowlist]
+  description = "La documentation montre des clés tronquées, jamais réelles"
+  regexes = [
+    '''aja_(live|test)_(…|\.\.\.|x{3,}|X{3,}|<[^>]+>)''',
+  ]
+
+# Le poivre de hachage des clés. Sa valeur réelle ne sort jamais de Railway ;
+# le nom de la variable, lui, est documenté partout.
+[[rules]]
+id = "aja-key-pepper"
+description = "Poivre de hachage des clés AJA"
+regex = '''API_KEY_PEPPER\s*[:=]\s*["']?[A-Za-z0-9+/_-]{12,}'''
+keywords = ["API_KEY_PEPPER"]
+tags = ["aja", "pepper"]
+
+  [rules.allowlist]
+  description = "Gabarits et documentation : des marqueurs, pas des secrets"
+  paths = [
+    '''\.env\.example$''',
+    '''\.(html|md)$''',
+  ]
+  regexes = [
+    '''(?i)(change[-_]?me|placeholder|exemple|example|dev-pepper|votre[-_]|your[-_])''',
+  ]
