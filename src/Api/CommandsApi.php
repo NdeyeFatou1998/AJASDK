@@ -29,19 +29,37 @@ final class CommandsApi
      * hiding it — and must refuse it, because the queue is FIFO and one
      * command left pending holds up every command behind it.
      *
+     * `$wait` demande à AJA de tenir la requête jusqu'à ce qu'une action
+     * arrive, au lieu de répondre vide tout de suite. Même appel, même
+     * direction : la latence tombe d'une minute à presque rien. 0 se comporte
+     * exactement comme avant.
+     *
      * @return list<Command>
      *
      * @throws ApiException|NetworkException
      */
-    public function pending(int $limit = 20): array
+    public function pending(int $limit = 20, int $wait = 0): array
     {
+        // Plafonné à 20 et non 25 : max_execution_time vaut souvent 30 s sur
+        // un hébergement mutualisé, et le script doit avoir le temps de
+        // traiter ce qu'il reçoit après avoir attendu.
+        $wait = max(0, min($wait, 20));
+        $query = ['limit' => (string) $limit];
+        if ($wait > 0) {
+            $query['wait'] = (string) $wait;
+        }
+
         $response = $this->client->send(
             'GET',
             '/v1/commands',
             null,
-            ['limit' => (string) $limit],
+            $query,
             true,
             true,
+            // Le délai client doit dépasser l'attente demandée, sinon cURL
+            // coupe la requête que nous venons de demander au serveur de
+            // tenir. Dix secondes de marge pour le réseau et la réponse.
+            $wait > 0 ? $wait + 10 : null,
         );
 
         $rows = $response['commands'] ?? [];

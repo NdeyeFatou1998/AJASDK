@@ -79,6 +79,7 @@ final class Client
         array $query = [],
         bool $retryTransport = true,
         bool $retryTransient = false,
+        ?int $timeoutSeconds = null,
     ): array {
         $url = $this->baseUrl . $path;
         if ($query !== []) {
@@ -103,7 +104,7 @@ final class Client
         while (true) {
             $attempt++;
             try {
-                $response = $this->http->request($method, $url, $headers, $payload);
+                $response = $this->http->request($method, $url, $headers, $payload, $timeoutSeconds);
             } catch (NetworkException $e) {
                 if ($retryTransport && $attempt < $this->maxAttempts) {
                     $this->sleepBeforeRetry($attempt);

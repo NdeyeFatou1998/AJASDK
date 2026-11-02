@@ -22,5 +22,12 @@ interface HttpClient
         string $url,
         array $headers,
         ?string $body = null,
+        /**
+         * Délai total pour CET appel, en secondes.
+         *
+         * Le long polling demande au serveur de tenir la requête : un délai
+         * client figé plus court tuerait la requête qu'on vient de demander.
+         */
+        ?int $timeoutSeconds = null,
     ): HttpResponse;
 }

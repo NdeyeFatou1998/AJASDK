@@ -19,6 +19,14 @@ final class Command
     public const TYPE_PRODUCT_STOCK = 'product.stock';
 
     /**
+     * Sonde de capacité : AJA demande si ce cron sait traiter les types
+     * product.*. Ne l'acquitter positivement QUE si c'est vrai — un
+     * acquittement complaisant ouvre l'édition du catalogue au marchand, et
+     * ses modifications se perdront ensuite sans que personne ne sache.
+     */
+    public const TYPE_PRODUCT_PROBE = 'product.probe';
+
+    /**
      * @param array<string,mixed> $payload
      * @param ?string             $externalId null for a product.create — the
      *                                        shop attributes the id itself and

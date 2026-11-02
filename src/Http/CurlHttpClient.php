@@ -29,6 +29,7 @@ final class CurlHttpClient implements HttpClient
         string $url,
         array $headers,
         ?string $body = null,
+        ?int $timeoutSeconds = null,
     ): HttpResponse {
         $handle = curl_init();
         if (!$handle instanceof CurlHandle) {
@@ -45,7 +46,7 @@ final class CurlHttpClient implements HttpClient
             CURLOPT_CUSTOMREQUEST => $method,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER => $headerLines,
-            CURLOPT_TIMEOUT => $this->timeoutSeconds,
+            CURLOPT_TIMEOUT => $timeoutSeconds ?? $this->timeoutSeconds,
             CURLOPT_CONNECTTIMEOUT => $this->connectTimeoutSeconds,
             CURLOPT_FOLLOWLOCATION => false,
         ]);

@@ -8,9 +8,13 @@ declare(strict_types=1);
  * AJA cannot reach your server, so this script comes to collect the actions
  * the merchant took in the mobile app.
  *
- * V2 adds four product types to the same queue. There is no second cron to
- * write: a V1 integration grows a few branches in the match below, and one
- * that does not want the catalogue simply keeps refusing them.
+ * V2 adds four product types to the same queue, plus a probe. There is no
+ * second cron to write: a V1 integration grows a few branches in the match
+ * below, and one that does not want the catalogue simply keeps refusing them.
+ *
+ * Le long polling : `pending(wait: 20)` demande à AJA de tenir la requête
+ * jusqu'à ce qu'une action arrive, au lieu de répondre vide tout de suite. La
+ * latence tombe d'une minute à presque rien, sans rien changer d'autre.
  */
 
 require __DIR__ . '/../vendor/autoload.php';
@@ -24,7 +28,7 @@ $aja = new Client(
     baseUrl: (string) (getenv('AJA_URL') ?: 'https://ajabackend-production.up.railway.app'),
 );
 
-foreach ($aja->commands()->pending() as $command) {
+foreach ($aja->commands()->pending(wait: 20) as $command) {
     try {
         match ($command->type) {
             Command::TYPE_ORDER_TRANSITION => applyTransition($aja, $myShop, $command),
@@ -32,6 +36,12 @@ foreach ($aja->commands()->pending() as $command) {
             Command::TYPE_PRODUCT_CREATE => applyProductCreate($aja, $myShop, $command),
             Command::TYPE_PRODUCT_DELETE => applyProductDelete($aja, $myShop, $command),
             Command::TYPE_PRODUCT_STOCK => applyProductStock($aja, $myShop, $command),
+            // La sonde : AJA demande si ce cron sait traiter les types
+            // product.*. N'acquitter positivement QUE si les branches
+            // ci-dessus sont réelles — un acquittement complaisant ouvre
+            // l'édition du catalogue au marchand, et ses modifications se
+            // perdront ensuite sans que personne ne sache pourquoi.
+            Command::TYPE_PRODUCT_PROBE => $aja->commands()->ack($command->id, ok: true),
             // Never leave an unknown type pending: the queue is FIFO, and one
             // stuck command holds up every command behind it.
             default => $aja->commands()->ack($command->id, ok: false, reason: 'unsupported_type'),
