@@ -86,7 +86,13 @@ final class OrderInput
             'total' => $this->total,
             'currency' => $this->currency,
             'customer' => $this->customer,
-            'lines' => array_values($this->lines),
+            // Un tableau vide s'encode en [] ; l'API attend un objet par ligne.
+            'lines' => array_map(
+                static fn (array $line): array => array_key_exists('extras', $line)
+                    ? ['extras' => (object) $line['extras']] + $line
+                    : $line,
+                array_values($this->lines),
+            ),
             'extras' => (object) $this->extras,
         ];
     }
