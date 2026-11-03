@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AJASDK — Conventions</title>
+  <style>
+    :root { --bg:#f4f5f7; --card:#fff; --ink:#12141a; --muted:#5c6570; --line:#e4e7ec; --navy:#0b1f3a; --accent:#18706b; --ok:#1b7f4e; --codebg:#0f1720; }
+    * { box-sizing: border-box; } html { scroll-behavior: smooth; }
+    body { margin:0; font:16px/1.55 "Segoe UI", system-ui, sans-serif; color:var(--ink); background:var(--bg); }
+    .layout { display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
+    nav { background:var(--navy); color:#d7dee8; padding:28px 18px; position:sticky; top:0; height:100vh; overflow:auto; }
+    nav h1 { color:#fff; font-size:18px; margin:0 0 4px; }
+    nav .tag { font-size:12px; color:#8aa0b8; margin-bottom:20px; }
+    nav a { display:block; color:#c5d0dc; text-decoration:none; padding:6px 8px; border-radius:6px; font-size:13px; }
+    nav a:hover { background:#163154; color:#fff; }
+    main { max-width:900px; padding:40px 48px 80px; }
+    h2 { font-size:22px; margin:40px 0 10px; }
+    table { width:100%; border-collapse:collapse; background:var(--card); font-size:14px; margin:12px 0 20px; }
+    th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+    th { background:#eef1f5; font-size:12px; text-transform:uppercase; color:var(--muted); }
+    code { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; background:#eef1f5; padding:1px 5px; border-radius:4px; }
+    pre { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; background:var(--codebg); color:#e8eef5; padding:14px 16px; border-radius:10px; overflow:auto; }
+    .callout { border-left:4px solid var(--accent); background:#e8f3f2; padding:12px 14px; border-radius:0 8px 8px 0; }
+    .pill { display:inline-block; font-size:12px; font-weight:650; padding:2px 8px; border-radius:999px; background:#e6f6ee; color:var(--ok); }
+    footer { margin-top:40px; color:var(--muted); font-size:13px; }
+    @media (max-width:860px) { .layout{grid-template-columns:1fr;} nav{position:relative;height:auto;} main{padding:24px 18px;} }
+  </style>
+</head>
+<body>
+<div class="layout">
+<nav>
+  <h1>AJASDK</h1>
+  <div class="tag">Conventions</div>
+  <a href="../CONVENTIONS.html">← Global</a>
+  <a href="V1.html">Spec V1</a>
+</nav>
+<main>
+<p class="pill">Complète le global</p>
+<h2 style="margin-top:12px">AJASDK — conventions</h2>
+<p>PHP 8.1+, <code>declare(strict_types=1);</code>, PSR-4 namespace <code>Aja\</code>, PSR-12, ext-curl only. The SDK never touches the merchant database.</p>
+
+<h2>Fichiers</h2>
+<table>
+  <tr><th>Class</th><th>Path</th></tr>
+  <tr><td><code>Aja\Client</code></td><td><code>src/Client.php</code></td></tr>
+  <tr><td><code>Aja\Api\OrdersApi</code></td><td><code>src/Api/OrdersApi.php</code></td></tr>
+  <tr><td><code>Aja\Dto\OrderInput</code></td><td><code>src/Dto/OrderInput.php</code></td></tr>
+  <tr><td><code>Aja\Exception\ApiException</code></td><td><code>src/Exception/ApiException.php</code></td></tr>
+</table>
+<p>One class per file, filename = class name. Examples stay under <code>examples/</code> and are commented as copy-paste templates, still in English comments with French string literals only if they echo to the shop admin.</p>
+
+<h2>Commentaires (English)</h2>
+<pre>&lt;?php
+declare(strict_types=1);
+
+namespace Aja\Api;
+
+/**
+ * Site-facing orders: create (upsert) and patch by the shop's external_id.
+ */
+final class OrdersApi
+{
+    /**
+     * POST /v1/orders. Safe to retry: the backend upserts on external_id.
+     *
+     * @throws ApiException|NetworkException
+     */
+    public function create(OrderInput $input): void
+    {
+    }
+}</pre>
+<p>Do not log the API key. Map HTTP bodies through <code>ErrorCode</code> (<a href="../ERRORS.html">ERRORS.html</a>). Integrators switch on <code>getErrorCode()</code>. Do not echo <code>getMessage()</code> to shoppers. <code>COMMAND_ALREADY_ACKED</code> is success.</p>
+
+<h2>Comportement</h2>
+<ul>
+  <li>Pas de Guzzle. Interface <code>HttpClient</code> pour les tests.</li>
+  <li>User-Agent <code>aja-php-sdk/1.0</code>.</li>
+  <li>Ignore unknown command <code>type</code> in examples; never ACK a type we do not understand unless V1 connector policy says reject (plugin Woo documents that separately).</li>
+  <li>BC : no breaking public method without a major Composer version. New methods OK.</li>
+</ul>
+<footer><a href="../CONVENTIONS.html">Conventions globales</a></footer>
+</main>
+</div>
+</body>
+</html>
