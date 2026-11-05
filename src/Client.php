@@ -7,6 +7,7 @@ namespace Aja;
 use Aja\Api\CommandsApi;
 use Aja\Api\OrdersApi;
 use Aja\Api\ProductsApi;
+use Aja\Api\SiteApi;
 use Aja\Exception\ApiException;
 use Aja\Exception\NetworkException;
 use Aja\Exception\ValidationException;
@@ -14,7 +15,7 @@ use Aja\Http\CurlHttpClient;
 use Aja\Http\HttpClient;
 
 /**
- * Entry point. Holds the key and the retry policy; the two Api classes only
+ * Entry point. Holds the key and the retry policy; the Api classes only
  * describe routes.
  *
  * The shop always calls AJA — there is no inbound traffic to receive, so this
@@ -32,6 +33,7 @@ final class Client
     private readonly OrdersApi $orders;
     private readonly CommandsApi $commands;
     private readonly ProductsApi $products;
+    private readonly SiteApi $site;
 
     public function __construct(
         private readonly string $apiKey,
@@ -45,6 +47,7 @@ final class Client
         $this->orders = new OrdersApi($this);
         $this->commands = new CommandsApi($this);
         $this->products = new ProductsApi($this);
+        $this->site = new SiteApi($this);
     }
 
     public function orders(): OrdersApi
@@ -60,6 +63,11 @@ final class Client
     public function products(): ProductsApi
     {
         return $this->products;
+    }
+
+    public function site(): SiteApi
+    {
+        return $this->site;
     }
 
     /**

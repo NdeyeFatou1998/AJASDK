@@ -39,6 +39,9 @@ $schema = [
 ];
 
 try {
+    // Say who the shop is first: the currency tells AJA how to read every
+    // price below. Your shop is the source of truth; repeat it every night.
+    $aja->site()->putProfile(currency: 'XOF', timezone: 'Africa/Dakar');
     $aja->products()->putSchema($schema);
 
     foreach ($myShop->allProducts() as $product) {

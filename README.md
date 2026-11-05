@@ -74,6 +74,22 @@ $aja = new Client(
 );
 ```
 
+### Déclarer votre boutique : devise et fuseau
+
+AJA ne devine ni la devise de votre boutique ni son fuseau : c'est votre
+boutique qui fait foi. Sans cette déclaration, l'application peut lire vos
+prix dans une autre devise — 1250 lu comme 1 250 F CFA au lieu de 12,50 €.
+Déclarez-la quand la boutique se connecte, puis une fois par nuit, avec
+votre catalogue :
+
+```php
+$aja->site()->putProfile(currency: 'EUR', timezone: 'Europe/Paris');
+```
+
+`currency` est un code ISO 4217 ; `timezone`, un nom IANA (`Africa/Dakar`,
+`Europe/Paris`). Un décalage nu comme `+02:00` n'en est pas un : AJA le
+refuse avec `VALIDATION`. L'appel se répète sans risque.
+
 ---
 
 ## 3. Étape 1 — envoyer vos commandes
@@ -284,6 +300,7 @@ $aja->orders()->update((string) $commande->id, [
 | `orders()->update(string, array)` | `PATCH /v1/orders/{external_id}` | Modifier une commande existante |
 | `commands()->pending(int $limit = 20)` | `GET /v1/commands` | Lire la file, plus ancienne d'abord |
 | `commands()->ack(id, ok, status, allowedNext, reason)` | `POST /v1/commands/{id}/ack` | Confirmer ou refuser |
+| `site()->putProfile(currency, timezone)` | `PUT /v1/site-profile` | Déclarer la devise et le fuseau de la boutique |
 
 ### `OrderInput`
 
@@ -374,6 +391,7 @@ Rien d'autre ne change : même code, même contrat.
 | Un statut revient sans cesse | Votre `changerStatut` échoue, ou vous n'acquittez pas |
 | Boutons absents dans l'application | `allowedNext` vide au moment du push |
 | Montants multipliés ou divisés par 100 | Conversion faite avec les décimales affichées par la boutique au lieu de l'exposant ISO 4217 — passez par `Money::toMinor()` |
+| Prix lus dans la mauvaise devise dans l'application | Profil jamais déclaré : `site()->putProfile()` |
 
 Pour signaler un incident à AJA, joignez le `getRequestId()` : il identifie
 l'appel exact dans les journaux serveur.

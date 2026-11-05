@@ -31,6 +31,7 @@ use Aja\Client;
 use Aja\Dto\OrderInput;
 use Aja\ErrorCode;
 use Aja\Exception\ApiException;
+use Aja\Exception\ValidationException;
 use Aja\Money;
 
 $API = rtrim(getenv('AJA_API') ?: 'http://localhost:8080', '/');
@@ -326,6 +327,32 @@ check(
     $locked instanceof ApiException && $locked->getErrorCode() === ErrorCode::PRODUCT_SCHEMA_LOCKED,
     code($locked),
 );
+
+echo "\n10. site()->putProfile — la boutique dit sa devise et son fuseau\n";
+// Revue du 4 novembre : la boutique de la section 1 est créée en XOF, comme
+// toutes celles du tableau de bord. C'est elle qui corrige ensuite.
+$profile = outcome(fn () => $client->site()->putProfile(currency: 'eur', timezone: 'Europe/Paris'));
+check(
+    'la devise et le fuseau déclarés sont ceux enregistrés',
+    is_array($profile) && ($profile['currency'] ?? null) === 'EUR' && ($profile['timezone'] ?? null) === 'Europe/Paris',
+    $profile instanceof Throwable ? code($profile) : (string) json_encode($profile, JSON_UNESCAPED_SLASHES),
+);
+[, $catalogue] = app('GET', "/v1/app/products?site_id=$siteId", $token);
+check(
+    "l'application lit le catalogue dans la devise déclarée",
+    ($catalogue['currency'] ?? null) === 'EUR',
+    (string) ($catalogue['currency'] ?? ''),
+);
+$repeated = outcome(fn () => $client->site()->putProfile(currency: 'EUR', timezone: 'Europe/Paris'));
+check("la redéclarer à l'identique rend la même chose", $repeated === $profile);
+$badZone = raised(fn () => $client->site()->putProfile(timezone: 'Mars/Olympus_Mons'));
+check(
+    'un fuseau inconnu lève ValidationException, qui nomme timezone',
+    $badZone instanceof ValidationException && array_key_exists('timezone', $badZone->fields()),
+    $badZone instanceof ApiException ? (string) json_encode($badZone->getDetails()) : code($badZone),
+);
+$nothing = raised(fn () => $client->site()->putProfile());
+check('sans rien à déclarer, le SDK refuse avant tout appel', $nothing instanceof InvalidArgumentException, code($nothing));
 
 echo $failures === 0 ? "\nLe SDK PHP parle correctement à l'API.\n" : "\n$failures vérification(s) en échec.\n";
 exit($failures === 0 ? 0 : 1);
