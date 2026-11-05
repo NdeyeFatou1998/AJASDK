@@ -16,6 +16,7 @@ require __DIR__ . '/../vendor/autoload.php';
 
 use Aja\Client;
 use Aja\Exception\AjaException;
+use Aja\Money;
 
 $aja = new Client(
     apiKey: (string) getenv('AJA_KEY'),
@@ -47,11 +48,13 @@ try {
             (string) $product->id,
             [
                 'nom' => $product->name,
-                'prix' => $product->priceInMinorUnits,
+                // Money fields are integers in the ISO 4217 minor unit. An
+                // empty price stays null — never 0, which would read as free.
+                'prix' => Money::toMinor($product->price, 'XOF'),
                 'stock' => $product->stock,
                 'photo' => $product->imageUrl,
                 'perso' => $product->customisable,
-                'prix_perso' => $product->customisationPrice,
+                'prix_perso' => Money::toMinor($product->customisationPrice, 'XOF'),
                 'taille' => $product->size,
             ],
             schemaVersion: $schema['version'],

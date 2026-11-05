@@ -80,6 +80,9 @@ function applyProductUpdate(Client $aja, $myShop, Command $command): void
 {
     // Validate with the rules you already wrote for your own admin. You do not
     // have to loosen anything for AJA — a refusal is shown to the merchant.
+    // Money fields arrive as integers in the ISO 4217 minor unit:
+    // Money::fromMinor($values['prix'], 'XOF') gives back the decimal string
+    // your own form stores, and "" when the merchant cleared the field.
     $myShop->updateProduct($command->externalId, $command->values());
     $aja->commands()->ack($command->id, ok: true);
 }

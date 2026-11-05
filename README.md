@@ -169,19 +169,34 @@ son propre arbitrage sur les deux cas ci-dessus.
 
 ### Les montants — l'erreur la plus fréquente
 
-`total` et `unit_price` sont des **entiers**, dans la plus petite unité
-affichée de la devise.
+`total` et `unit_price` sont des **entiers**, dans la plus petite unité de la
+devise **selon ISO 4217** — jamais le nombre de décimales que votre boutique
+choisit d'afficher. Une boutique en francs CFA réglée pour afficher
+« 15 000,00 F » envoie quand même `15000`.
 
-| Devise | Décimales | 15 000 s'écrit | 19,99 s'écrit |
-|---|---|---|---|
-| XOF | 0 | `15000` | — |
-| EUR | 2 | — | `1999` |
+| Devise | Exposant | 15 000 s'écrit | 12,50 s'écrit | 1,250 s'écrit |
+|---|---|---|---|---|
+| XOF, XAF, JPY, VND… | 0 | `15000` | — | — |
+| EUR, USD, MAD… (toutes les autres) | 2 | `1500000` | `1250` | — |
+| KWD, BHD, TND… | 3 | — | — | `1250` |
 
-Un flottant est refusé avant même l'appel réseau. Convertissez ainsi :
+`Money` convertit la chaîne décimale que votre base stocke, sans passer par
+un flottant, et arrondit au demi supérieur quand il y a trop de décimales :
 
 ```php
-$total = (int) round($montant * (10 ** $decimales));
+use Aja\Money;
+
+Money::toMinor('12.50', 'EUR');     // 1250
+Money::toMinor('15000.00', 'XOF');  // 15000
+Money::toMinor('12.505', 'EUR');    // 1251
+Money::toMinor('', 'EUR');          // null : pas de montant, jamais 0
+Money::fromMinor(1250, 'EUR');      // "12.50" — pour réécrire un prix reçu d'AJA
+Money::exponent('KWD');             // 3
 ```
+
+Ne multipliez jamais un flottant : en binaire, `1.005` vaut
+`1.00499999999999989…`, et `(int) (1.005 * 100)` donne `100`. Un flottant
+dans `total` est refusé avant même l'appel réseau.
 
 ---
 
@@ -358,7 +373,7 @@ Rien d'autre ne change : même code, même contrat.
 | Les commandes arrivent, les statuts ne reviennent jamais | Le cron ne tourne pas |
 | Un statut revient sans cesse | Votre `changerStatut` échoue, ou vous n'acquittez pas |
 | Boutons absents dans l'application | `allowedNext` vide au moment du push |
-| Montants multipliés par 100 | Devise à 2 décimales traitée comme 0 |
+| Montants multipliés ou divisés par 100 | Conversion faite avec les décimales affichées par la boutique au lieu de l'exposant ISO 4217 — passez par `Money::toMinor()` |
 
 Pour signaler un incident à AJA, joignez le `getRequestId()` : il identifie
 l'appel exact dans les journaux serveur.

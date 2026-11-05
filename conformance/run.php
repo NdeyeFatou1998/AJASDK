@@ -10,6 +10,9 @@
  * Le même scénario existe dans AJASDK-NODE et AJASDK-PYTHON, avec les mêmes
  * libellés, pour que les trois se comparent ligne à ligne.
  *
+ * La section 0 (les montants) ne demande aucun réseau et tourne en premier :
+ * sans API, le scénario s'arrête juste après elle, en le disant.
+ *
  *   AJA_API=http://localhost:8080 php conformance/run.php
  */
 
@@ -28,6 +31,7 @@ use Aja\Client;
 use Aja\Dto\OrderInput;
 use Aja\ErrorCode;
 use Aja\Exception\ApiException;
+use Aja\Money;
 
 $API = rtrim(getenv('AJA_API') ?: 'http://localhost:8080', '/');
 const PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
@@ -81,6 +85,16 @@ function raised(callable $fn): ?Throwable
     }
 }
 
+/** La valeur rendue, ou l'exception levée : un cas qui plante reste un cas, pas une erreur fatale. */
+function outcome(callable $fn): mixed
+{
+    try {
+        return $fn();
+    } catch (Throwable $e) {
+        return $e;
+    }
+}
+
 function code(?Throwable $e): string
 {
     return $e instanceof ApiException ? $e->getErrorCode() : ($e === null ? '' : get_class($e) . ': ' . $e->getMessage());
@@ -94,7 +108,65 @@ $SCHEMA = [
     ],
 ];
 
-echo "1. Le marchand ouvre une boutique\n";
+echo "0. Money — les montants, sans réseau\n";
+// Revue du 4 novembre : le connecteur WooCommerce comptait les montants avec
+// le nombre de décimales que la boutique affiche, quand l'application, le web
+// et les notifications divisent par l'exposant ISO 4217. Chaque exemple du
+// contrat (§1) est un cas ici, avec le même libellé dans les trois SDK.
+$toMinor = [
+    ['« 12.5 » EUR → 1250', '12.5', 'EUR', 1250],
+    ['« 12.505 » EUR → 1251, le demi arrondi au-dessus', '12.505', 'EUR', 1251],
+    ['« 15000 » XOF → 15000', '15000', 'XOF', 15000],
+    ['« 15000.00 » XOF → 15000', '15000.00', 'XOF', 15000],
+    ['« 1.2345 » KWD → 1235', '1.2345', 'KWD', 1235],
+    ['« -3.10 » EUR → -310', '-3.10', 'EUR', -310],
+    ['« » (vide) → pas de montant, jamais 0', '', 'EUR', null],
+    // Hors des exemples du contrat : un nombre suit le chemin de sa chaîne, et
+    // le demi d'un montant négatif s'éloigne de zéro, comme round() de PHP.
+    // Un choix à garder identique dans les trois SDK.
+    ['le nombre 12.5 EUR → 1250, comme la chaîne', 12.5, 'EUR', 1250],
+    ['le nombre 1.005 EUR → 101 : jamais de flottant multiplié', 1.005, 'EUR', 101],
+    ['le nombre entier 15000 XOF → 15000', 15000, 'XOF', 15000],
+    ['« -3.105 » EUR → -311, le demi s\'éloigne de zéro', '-3.105', 'EUR', -311],
+];
+foreach ($toMinor as [$label, $amount, $currency, $want]) {
+    $got = outcome(fn () => Money::toMinor($amount, $currency));
+    check($label, $got === $want, $got instanceof Throwable ? code($got) : var_export($got, true));
+}
+$comma = raised(fn () => Money::toMinor('12,50', 'EUR'));
+check(
+    '« 12,50 » est refusé : la virgule ne dit pas si elle sépare les milliers',
+    $comma instanceof InvalidArgumentException,
+    code($comma),
+);
+$fromMinor = [
+    ['1250 EUR → « 12.50 »', 1250, 'EUR', '12.50'],
+    ['15000 XOF → « 15000 »', 15000, 'XOF', '15000'],
+    ['1250 KWD → « 1.250 »', 1250, 'KWD', '1.250'],
+    ['-310 EUR → « -3.10 »', -310, 'EUR', '-3.10'],
+    ['pas de montant (null) → « »', null, 'EUR', ''],
+];
+foreach ($fromMinor as [$label, $minor, $currency, $want]) {
+    $got = outcome(fn () => Money::fromMinor($minor, $currency));
+    check($label, $got === $want, $got instanceof Throwable ? code($got) : var_export($got, true));
+}
+$exponents = outcome(fn () => array_map(Money::exponent(...), ['XOF', 'eur', 'KWD', 'ZZZ']));
+check(
+    'la table des exposants : XOF 0, eur 2, KWD 3, une devise inconnue 2',
+    $exponents === [0, 2, 3, 2],
+    $exponents instanceof Throwable ? code($exponents) : (string) json_encode($exponents),
+);
+
+// Tout ce qui suit parle à l'API. Sans elle, on s'arrête ici en le disant,
+// plutôt que sur une erreur fatale à la première réponse vide.
+[$health] = app('GET', '/health');
+if ($health !== 200) {
+    echo "\nL'API ne répond pas sur $API : seules les vérifications sans réseau ont tourné.\n";
+    echo $failures === 0 ? '' : "$failures vérification(s) en échec.\n";
+    exit(1);
+}
+
+echo "\n1. Le marchand ouvre une boutique\n";
 [, $signup] = app('POST', '/v1/web/auth/register', null, [
     'email' => 'sdk-php-' . (int) (microtime(true) * 1000) . '@example.test',
     'password' => 'motdepasse-assez-long',
