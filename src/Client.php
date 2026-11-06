@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Aja;
 
+use InvalidArgumentException;
+
 use Aja\Api\CommandsApi;
 use Aja\Api\OrdersApi;
 use Aja\Api\ProductsApi;
@@ -43,11 +45,49 @@ final class Client
         private readonly int $backoffMs = 200,
     ) {
         $this->baseUrl = rtrim($baseUrl === '' ? self::DEFAULT_BASE_URL : $baseUrl, '/');
+        self::assertSafeBaseUrl($this->baseUrl);
         $this->http = $http ?? new CurlHttpClient();
         $this->orders = new OrdersApi($this);
         $this->commands = new CommandsApi($this);
         $this->products = new ProductsApi($this);
         $this->site = new SiteApi($this);
+    }
+
+    /**
+     * The API key travels in every request: never in clear text to a public
+     * server. http is accepted only for a local test server (localhost, a
+     * private network address, *.test, *.local, host.docker.internal).
+     *
+     * @throws InvalidArgumentException
+     */
+    private static function assertSafeBaseUrl(string $baseUrl): void
+    {
+        $scheme = strtolower((string) parse_url($baseUrl, PHP_URL_SCHEME));
+        $host = strtolower(trim((string) parse_url($baseUrl, PHP_URL_HOST), '[]'));
+        if ($scheme === 'https') {
+            return;
+        }
+        if ($scheme === 'http' && self::isLocalHost($host)) {
+            return;
+        }
+        throw new InvalidArgumentException(sprintf(
+            'AJA base URL "%s" must use https: the API key would travel in clear text (http is only for a local test server)',
+            $baseUrl,
+        ));
+    }
+
+    private static function isLocalHost(string $host): bool
+    {
+        if (in_array($host, ['localhost', 'host.docker.internal'], true)
+            || preg_match('/\.(localhost|local|test)$/', $host) === 1
+        ) {
+            return true;
+        }
+        if (filter_var($host, FILTER_VALIDATE_IP) === false) {
+            return false;
+        }
+
+        return filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false;
     }
 
     public function orders(): OrdersApi
