@@ -90,6 +90,18 @@ $aja->site()->putProfile(currency: 'EUR', timezone: 'Europe/Paris');
 `Europe/Paris`). Un décalage nu comme `+02:00` n'en est pas un : AJA le
 refuse avec `VALIDATION`. L'appel se répète sans risque.
 
+**L'adresse de réveil.** Une boutique qui ne vient chercher ses actions que
+sur une tâche planifiée déclenchée par les visites (WP-Cron) ne les applique
+pas quand personne ne passe. Donnez à AJA une adresse publique en https qu'il
+appellera (GET, au plus toutes les 30 s) quand une action vous attend :
+
+```php
+$aja->site()->putProfile(wakeUrl: 'https://votre-boutique.com/wp-cron.php?doing_wp_cron');
+```
+
+AJA n'appelle jamais une adresse interne (localhost, réseau privé) et ne lit
+pas la réponse.
+
 ---
 
 ## 3. Étape 1 — envoyer vos commandes
@@ -300,7 +312,7 @@ $aja->orders()->update((string) $commande->id, [
 | `orders()->update(string, array)` | `PATCH /v1/orders/{external_id}` | Modifier une commande existante |
 | `commands()->pending(int $limit = 20)` | `GET /v1/commands` | Lire la file, plus ancienne d'abord |
 | `commands()->ack(id, ok, status, allowedNext, reason)` | `POST /v1/commands/{id}/ack` | Confirmer ou refuser |
-| `site()->putProfile(currency, timezone)` | `PUT /v1/site-profile` | Déclarer la devise et le fuseau de la boutique |
+| `site()->putProfile(currency, timezone, wakeUrl)` | `PUT /v1/site-profile` | Déclarer la devise, le fuseau et l'adresse de réveil de la boutique |
 
 ### `OrderInput`
 
