@@ -12,6 +12,7 @@ require __DIR__ . '/../vendor/autoload.php';
 use Aja\Client;
 use Aja\Dto\OrderInput;
 use Aja\Exception\AjaException;
+use Aja\Money;
 
 $aja = new Client(
     apiKey: (string) getenv('AJA_KEY'),
@@ -25,7 +26,9 @@ try {
         allowedNext: ['processing', 'cancelled'],
         paymentStatus: 'pending',                 // pending|paid|failed|refunded
         paymentMode: 'cod',
-        total: 15000,                             // integer, XOF has no decimals
+        // Integers in the currency's ISO 4217 minor unit, whatever your shop
+        // displays: "15000.00" in XOF is 15000, "12.50" in EUR is 1250.
+        total: Money::toMinor($order->total, 'XOF'),
         currency: 'XOF',
         customer: [
             'name' => $order->customer_name,
@@ -33,7 +36,7 @@ try {
             'email' => $order->customer_email,
         ],
         lines: [
-            ['name' => 'Pagne', 'quantity' => 1, 'unit_price' => 15000],
+            ['name' => 'Pagne', 'quantity' => 1, 'unit_price' => Money::toMinor($order->line_price, 'XOF')],
         ],
         extras: ['quartier' => 'Plateau'],
     ));

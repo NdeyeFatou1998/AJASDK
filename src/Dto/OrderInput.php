@@ -10,8 +10,10 @@ use InvalidArgumentException;
 /**
  * One order as the shop knows it, ready for POST /v1/orders.
  *
- * Amounts are integers in the currency's smallest displayed unit. XOF has no
- * decimals, so a 15 000 F order is 15000. Never pass a float: JSON floats lose
+ * Amounts are integers in the smallest unit of the currency, per ISO 4217 —
+ * never the number of decimals the shop chooses to display. XOF has none, so
+ * a 15 000 F order is 15000; EUR has two, so 12,50 € is 1250. Money::toMinor()
+ * converts the shop's decimal string. Never pass a float: JSON floats lose
  * precision and the backend rejects them.
  */
 final class OrderInput
