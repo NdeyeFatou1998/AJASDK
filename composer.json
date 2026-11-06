@@ -1,8 +1,8 @@
 {
   "name": "aja/sdk",
-  "description": "PHP client for the AJA order API. The shop calls AJA; AJA never calls the shop.",
+  "description": "PHP client for the AJA order API: the shop sends its orders and polls the merchant's actions.",
   "type": "library",
-  "license": "proprietary",
+  "license": "MIT",
   "require": {
     "php": "^8.1",
     "ext-curl": "*",
