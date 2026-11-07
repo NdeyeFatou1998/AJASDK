@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.1.0 — 2026-11-07
+
+### Nouveau
+
+- Preuve de propriété : `site()->handleWake($_GET)`, à appeler depuis votre adresse de réveil. Avant de passer un site
+  en production, AJA appelle cette adresse avec `aja_verify=<code>` ; le SDK lui renvoie le code avec la clé du site
+  (`POST /v1/site-verification`). Sans code, ou avec un code mal formé, rien ne part. `site()->confirmVerification($code)`
+  fait l'envoi seul.
+- Code d'erreur `ErrorCode::VERIFICATION_FAILED` (HTTP 422, jamais réessayé) : code inconnu ou expiré, ou domaine changé
+  depuis l'envoi. `handleWake()` le rend en `['verified' => false]`, sans lever.
+
 ## 2.0.0 — 2026-11-06
 
 Version de lancement d'AJA V2.

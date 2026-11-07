@@ -102,6 +102,28 @@ $aja->site()->putProfile(wakeUrl: 'https://votre-boutique.com/wp-cron.php?doing_
 AJA n'appelle jamais une adresse interne (localhost, réseau privé) et ne lit
 pas la réponse.
 
+**La preuve de propriété.** N'importe qui peut déclarer le domaine d'une autre
+boutique. Avant de passer un site en production, AJA vérifie donc que le
+serveur derrière le domaine déclaré détient sa clé : il appelle votre adresse
+de réveil avec un paramètre de plus, `aja_verify=<code>`, et attend que ce code
+lui revienne avec la clé. Votre gestionnaire de réveil le renvoie en une ligne,
+avant son travail habituel :
+
+```php
+// Le script de votre adresse de réveil
+$aja->site()->handleWake($_GET);   // renvoie le code à AJA quand il le demande
+// … puis votre tâche habituelle : commands()->pending(), ack(), etc.
+```
+
+Sans `aja_verify`, ou avec un code qui n'a pas la forme de ceux d'AJA,
+`handleWake()` rend `null` sans rien envoyer. Un code qu'AJA refuse (inconnu,
+expiré, ou domaine changé depuis) rend `['verified' => false]` sans lever :
+une adresse publique reçoit n'importe quoi. Les autres erreurs (clé révoquée,
+réseau) lèvent comme tout appel. Sur WordPress, l'adresse est `wp-cron.php` :
+appelez `handleWake(wp_unslash($_GET))` depuis le crochet `init` — l'extension
+AJA pour WooCommerce le fait déjà. `confirmVerification($code)` fait l'envoi
+seul, si vous lisez le code vous-même.
+
 ---
 
 ## 3. Étape 1 — envoyer vos commandes
@@ -313,6 +335,8 @@ $aja->orders()->update((string) $commande->id, [
 | `commands()->pending(int $limit = 20)` | `GET /v1/commands` | Lire la file, plus ancienne d'abord |
 | `commands()->ack(id, ok, status, allowedNext, reason)` | `POST /v1/commands/{id}/ack` | Confirmer ou refuser |
 | `site()->putProfile(currency, timezone, wakeUrl)` | `PUT /v1/site-profile` | Déclarer la devise, le fuseau et l'adresse de réveil de la boutique |
+| `site()->handleWake(array $query)` | `POST /v1/site-verification` | Depuis l'adresse de réveil : renvoyer à AJA le code `aja_verify`, s'il y en a un |
+| `site()->confirmVerification(string $code)` | `POST /v1/site-verification` | Renvoyer un code lu soi-même |
 
 ### `OrderInput`
 
@@ -374,6 +398,7 @@ try {
 | `ORDER_NOT_FOUND` | `external_id` inconnu d'AJA | lève, aucun retry |
 | `COMMAND_ALREADY_ACKED` | Déjà acquitté | **traité comme un succès** |
 | `TEST_TRIAL_EXPIRED` | Essai terminé | lève, aucun retry |
+| `VERIFICATION_FAILED` | Code de preuve inconnu, expiré, ou domaine changé (HTTP 422) | lève, aucun retry — `handleWake()` rend `['verified' => false]` |
 | `RATE_LIMITED`, 502/503/504 | Incident passager | 3 tentatives, 200 ms × 2 |
 | *réseau, DNS, timeout* | `NetworkException` | 3 tentatives puis lève |
 
@@ -387,7 +412,10 @@ qu'on voit un `total` envoyé en flottant.
 1. Intégrez avec une clé `aja_test_`.
 2. Vérifiez les deux sens : une commande arrive dans l'application, **et** un
    changement de statut fait depuis l'application arrive chez vous.
-3. Créez une clé `aja_live_` dans l'espace marchand, remplacez la valeur.
+3. Votre adresse de réveil appelle `site()->handleWake($_GET)` (§2, « La
+   preuve de propriété ») : AJA vérifie ainsi que votre serveur détient la clé
+   avant de passer le site en production.
+4. Créez une clé `aja_live_` dans l'espace marchand, remplacez la valeur.
 
 Rien d'autre ne change : même code, même contrat.
 
