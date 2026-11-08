@@ -78,6 +78,28 @@ function app(string $method, string $path, ?string $token = null, ?array $body =
     return [$status, $text === '' ? [] : (json_decode($text, true) ?? [])];
 }
 
+/**
+ * L'admin du site : depuis le 7 novembre au soir, c'est lui qui fait le
+ * commerce, pas l'admin du compte. Son invitation ne part que par e-mail :
+ * l'outil du banc la pose en base et l'accepte par l'API, comme depuis le lien
+ * (AJABACKEND/src/tools/site-admin.ts ; AJA_BACKEND_DIR pour un autre dossier).
+ */
+function site_admin_token(string $siteId): string
+{
+    global $API;
+    $backend = getenv('AJA_BACKEND_DIR') ?: dirname(__DIR__, 2) . '/AJABACKEND';
+    $command = sprintf(
+        'cd %s && AJA_API=%s npm run -s sync:site-admin -- %s',
+        escapeshellarg($backend),
+        escapeshellarg($API),
+        escapeshellarg($siteId),
+    );
+    $lines = preg_split('/\R/', trim((string) shell_exec($command))) ?: [];
+    $last = json_decode((string) end($lines), true);
+
+    return is_array($last) ? (string) ($last['access_token'] ?? '') : '';
+}
+
 function raised(callable $fn): ?Throwable
 {
     try {
@@ -273,10 +295,13 @@ echo "\n1. Le marchand ouvre une boutique\n";
     'id_front' => PIXEL,
     'id_back' => PIXEL,
 ]);
-$token = $signup['access_token'];
-[$status, $site] = app('POST', '/v1/app/sites', $token, ['name' => 'SDK', 'platform' => 'custom', 'currency' => 'XOF']);
+$ownerToken = $signup['access_token'];
+[$status, $site] = app('POST', '/v1/app/sites', $ownerToken, ['name' => 'SDK', 'platform' => 'custom', 'currency' => 'XOF']);
 check('boutique créée', $status === 201, "HTTP $status");
 $siteId = $site['id'];
+// Le commerce de la boutique : son admin, invité par l'admin du compte.
+$token = site_admin_token($siteId);
+check("l'admin du site rejoint la boutique", $token !== '');
 $client = new Client($site['api_key'], $API);
 
 echo "\n2. products()->putSchema\n";
