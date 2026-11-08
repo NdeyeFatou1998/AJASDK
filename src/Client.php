@@ -25,8 +25,8 @@ use Aja\Http\HttpClient;
  */
 final class Client
 {
-    public const VERSION = '1.0';
-    public const USER_AGENT = 'aja-php-sdk/1.0';
+    public const VERSION = '1.0.0';
+    public const USER_AGENT = 'aja-php-sdk/' . self::VERSION;
 
     private const DEFAULT_BASE_URL = 'https://ajabackend-production.up.railway.app';
 
