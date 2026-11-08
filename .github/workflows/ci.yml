@@ -120,6 +120,8 @@ jobs:
         working-directory: self
         env:
           AJA_API: http://localhost:8080
+          # L'outil du banc qui donne un admin de site au scénario (sync:site-admin).
+          AJA_BACKEND_DIR: ${{ github.workspace }}/backend
         run: php conformance/run.php
       - name: Journal de l'API
         if: failure()
