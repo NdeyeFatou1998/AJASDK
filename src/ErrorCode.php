@@ -30,6 +30,8 @@ final class ErrorCode
     public const PRODUCT_SCHEMA_LOCKED = 'PRODUCT_SCHEMA_LOCKED';
     /** The site enforces an IP allow-list and this server's address is not on it. */
     public const SITE_IP_NOT_ALLOWED = 'SITE_IP_NOT_ALLOWED';
+    /** The ownership code is unknown or expired, or the shop's domain changed since AJA sent it. */
+    public const VERIFICATION_FAILED = 'VERIFICATION_FAILED';
     public const CONFLICT = 'CONFLICT';
     public const TEST_TRIAL_EXPIRED = 'TEST_TRIAL_EXPIRED';
     public const PROD_NOT_ACTIVE = 'PROD_NOT_ACTIVE';
@@ -55,6 +57,7 @@ final class ErrorCode
         self::PRODUCT_SCHEMA_OUTDATED,
         self::PRODUCT_SCHEMA_LOCKED,
         self::SITE_IP_NOT_ALLOWED,
+        self::VERIFICATION_FAILED,
         self::TEST_TRIAL_EXPIRED,
         self::PROD_NOT_ACTIVE,
     ];

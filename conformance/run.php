@@ -10,8 +10,9 @@
  * Le même scénario existe dans AJASDK-NODE et AJASDK-PYTHON, avec les mêmes
  * libellés, pour que les trois se comparent ligne à ligne.
  *
- * La section 0 (les montants) ne demande aucun réseau et tourne en premier :
- * sans API, le scénario s'arrête juste après elle, en le disant.
+ * Les sections 0 (les montants) et 0 bis (la preuve de propriété, contre un
+ * transport factice) ne demandent aucun réseau et tournent en premier : sans
+ * API, le scénario s'arrête juste après elles, en le disant.
  *
  *   AJA_API=http://localhost:8080 php conformance/run.php
  */
@@ -32,6 +33,8 @@ use Aja\Dto\OrderInput;
 use Aja\ErrorCode;
 use Aja\Exception\ApiException;
 use Aja\Exception\ValidationException;
+use Aja\Http\HttpClient;
+use Aja\Http\HttpResponse;
 use Aja\Money;
 
 $API = rtrim(getenv('AJA_API') ?: 'http://localhost:8080', '/');
@@ -75,6 +78,28 @@ function app(string $method, string $path, ?string $token = null, ?array $body =
     return [$status, $text === '' ? [] : (json_decode($text, true) ?? [])];
 }
 
+/**
+ * L'admin du site : depuis le 7 novembre au soir, c'est lui qui fait le
+ * commerce, pas l'admin du compte. Son invitation ne part que par e-mail :
+ * l'outil du banc la pose en base et l'accepte par l'API, comme depuis le lien
+ * (AJABACKEND/src/tools/site-admin.ts ; AJA_BACKEND_DIR pour un autre dossier).
+ */
+function site_admin_token(string $siteId): string
+{
+    global $API;
+    $backend = getenv('AJA_BACKEND_DIR') ?: dirname(__DIR__, 2) . '/AJABACKEND';
+    $command = sprintf(
+        'cd %s && AJA_API=%s npm run -s sync:site-admin -- %s',
+        escapeshellarg($backend),
+        escapeshellarg($API),
+        escapeshellarg($siteId),
+    );
+    $lines = preg_split('/\R/', trim((string) shell_exec($command))) ?: [];
+    $last = json_decode((string) end($lines), true);
+
+    return is_array($last) ? (string) ($last['access_token'] ?? '') : '';
+}
+
 function raised(callable $fn): ?Throwable
 {
     try {
@@ -99,6 +124,25 @@ function outcome(callable $fn): mixed
 function code(?Throwable $e): string
 {
     return $e instanceof ApiException ? $e->getErrorCode() : ($e === null ? '' : get_class($e) . ': ' . $e->getMessage());
+}
+
+/** Un transport factice : il note chaque appel et rend la réponse suivante. */
+final class Wire implements HttpClient
+{
+    /** @var list<array{method:string,url:string,headers:array<string,string>,body:?string}> */
+    public array $calls = [];
+
+    /** @param list<HttpResponse> $replies */
+    public function __construct(private array $replies = [])
+    {
+    }
+
+    public function request(string $method, string $url, array $headers, ?string $body = null, ?int $timeoutSeconds = null): HttpResponse
+    {
+        $this->calls[] = ['method' => $method, 'url' => $url, 'headers' => $headers, 'body' => $body];
+
+        return array_shift($this->replies) ?? new HttpResponse(500, '{}');
+    }
 }
 
 $SCHEMA = [
@@ -165,6 +209,70 @@ check("une adresse d'API en http vers un serveur public est refusée", $public i
 $local = outcome(fn () => new Client('aja_test_conformance', 'http://localhost:8080'));
 check("en http vers la machine locale (banc d'essai), acceptée", $local instanceof Client, $local instanceof Throwable ? $local->getMessage() : 'acceptée');
 
+echo "\n0 bis. site()->handleWake — la preuve de propriété, sans réseau\n";
+// Fraude au domaine : avant de passer un site en production, AJA appelle son
+// adresse de réveil avec aja_verify=<code>, et la boutique lui renvoie le code
+// avec sa clé. Une adresse publique reçoit n'importe quoi : rien ne part sans
+// un code bien formé. Mêmes libellés dans les trois SDK.
+$CODE = str_repeat('aB3_-', 8);
+$wire = new Wire();
+$offline = new Client('aja_test_conformance', 'http://aja.test', $wire, 3, 0);
+$quiet = outcome(fn () => [$offline->site()->handleWake([]), $offline->site()->handleWake(['doing_wp_cron' => ''])]);
+check('sans aja_verify, handleWake rend null sans appeler AJA', $quiet === [null, null] && $wire->calls === [], $quiet instanceof Throwable ? code($quiet) : count($wire->calls) . ' appel(s)');
+$malformed = [str_repeat('a', 31), str_repeat('a', 129), str_repeat('a', 31) . '/', $CODE . "\n", [$CODE, $CODE]];
+$ignored = outcome(fn () => array_map(fn ($value) => $offline->site()->handleWake(['aja_verify' => $value]), $malformed));
+check(
+    'un code mal formé — trop court, trop long, hors alphabet, saut de ligne final, en double — rend null sans appeler AJA',
+    $ignored === [null, null, null, null, null] && $wire->calls === [],
+    $ignored instanceof Throwable ? code($ignored) : (string) json_encode($ignored) . ', ' . count($wire->calls) . ' appel(s)',
+);
+$wire = new Wire([new HttpResponse(200, '{"verified":true,"domain":"shop.example"}')]);
+$offline = new Client('aja_test_conformance', 'http://aja.test', $wire, 3, 0);
+$proven = outcome(fn () => $offline->site()->handleWake(['doing_wp_cron' => '', 'aja_verify' => $CODE]));
+$sent = $wire->calls[0] ?? ['method' => '', 'url' => '', 'headers' => [], 'body' => null];
+check(
+    'un code bien formé part en POST /v1/site-verification, avec la clé et {nonce}',
+    count($wire->calls) === 1 && $sent['method'] === 'POST' && $sent['url'] === 'http://aja.test/v1/site-verification'
+        && ($sent['headers']['Authorization'] ?? '') === 'Bearer aja_test_conformance'
+        && json_decode((string) $sent['body'], true) === ['nonce' => $CODE],
+    $sent['method'] . ' ' . $sent['url'] . ' ' . $sent['body'],
+);
+check(
+    'AJA confirme : handleWake rend verified true et le domaine',
+    $proven === ['verified' => true, 'domain' => 'shop.example'],
+    $proven instanceof Throwable ? code($proven) : (string) json_encode($proven),
+);
+$failed = '{"error":{"code":"VERIFICATION_FAILED","message":"unknown or expired code"}}';
+$wire = new Wire([new HttpResponse(422, $failed), new HttpResponse(422, $failed)]);
+$offline = new Client('aja_test_conformance', 'http://aja.test', $wire, 3, 0);
+$refused = outcome(fn () => $offline->site()->handleWake(['aja_verify' => $CODE]));
+check(
+    'AJA refuse le code (VERIFICATION_FAILED) : handleWake rend verified false, sans nouvel essai',
+    $refused === ['verified' => false] && count($wire->calls) === 1,
+    ($refused instanceof Throwable ? code($refused) : (string) json_encode($refused)) . ', ' . count($wire->calls) . ' appel(s)',
+);
+$wire = new Wire([new HttpResponse(422, $failed), new HttpResponse(422, $failed)]);
+$offline = new Client('aja_test_conformance', 'http://aja.test', $wire, 3, 0);
+$verificationFailed = raised(fn () => $offline->site()->confirmVerification($CODE));
+check(
+    'confirmVerification lève ApiException VERIFICATION_FAILED, jamais réessayé',
+    $verificationFailed instanceof ApiException && $verificationFailed->getErrorCode() === ErrorCode::VERIFICATION_FAILED
+        && $verificationFailed->getHttpStatus() === 422 && count($wire->calls) === 1 && !ErrorCode::isRetryable(ErrorCode::VERIFICATION_FAILED),
+    code($verificationFailed) . ', ' . count($wire->calls) . ' appel(s)',
+);
+$wire = new Wire([new HttpResponse(401, '{"error":{"code":"SITE_KEY_INVALID","message":"invalid key"}}')]);
+$offline = new Client('aja_test_conformance', 'http://aja.test', $wire, 3, 0);
+$badKey = raised(fn () => $offline->site()->handleWake(['aja_verify' => $CODE]));
+check(
+    'une autre erreur (SITE_KEY_INVALID) lève, comme pour tout appel',
+    $badKey instanceof ApiException && $badKey->getErrorCode() === ErrorCode::SITE_KEY_INVALID,
+    code($badKey),
+);
+$wire = new Wire();
+$offline = new Client('aja_test_conformance', 'http://aja.test', $wire, 3, 0);
+$early = raised(fn () => $offline->site()->confirmVerification('trop-court'));
+check('confirmVerification refuse un code mal formé avant tout appel', $early instanceof InvalidArgumentException && $wire->calls === [], code($early));
+
 // Tout ce qui suit parle à l'API. Sans elle, on s'arrête ici en le disant,
 // plutôt que sur une erreur fatale à la première réponse vide.
 [$health] = app('GET', '/health');
@@ -187,10 +295,13 @@ echo "\n1. Le marchand ouvre une boutique\n";
     'id_front' => PIXEL,
     'id_back' => PIXEL,
 ]);
-$token = $signup['access_token'];
-[$status, $site] = app('POST', '/v1/app/sites', $token, ['name' => 'SDK', 'platform' => 'custom', 'currency' => 'XOF']);
+$ownerToken = $signup['access_token'];
+[$status, $site] = app('POST', '/v1/app/sites', $ownerToken, ['name' => 'SDK', 'platform' => 'custom', 'currency' => 'XOF']);
 check('boutique créée', $status === 201, "HTTP $status");
 $siteId = $site['id'];
+// Le commerce de la boutique : son admin, invité par l'admin du compte.
+$token = site_admin_token($siteId);
+check("l'admin du site rejoint la boutique", $token !== '');
 $client = new Client($site['api_key'], $API);
 
 echo "\n2. products()->putSchema\n";
@@ -360,6 +471,23 @@ check(
 );
 $nothing = raised(fn () => $client->site()->putProfile());
 check('sans rien à déclarer, le SDK refuse avant tout appel', $nothing instanceof InvalidArgumentException, code($nothing));
+
+echo "\n11. site()->handleWake — la preuve de propriété\n";
+// Seul le refus se rejoue ici : un vrai code part d'AJA vers l'adresse de
+// réveil publique du site, que ce banc n'a pas.
+$unknown = bin2hex(random_bytes(20));
+$stray = outcome(fn () => $client->site()->handleWake(['aja_verify' => $unknown]));
+check(
+    "un code qu'AJA n'a pas émis : handleWake rend verified false",
+    $stray === ['verified' => false],
+    $stray instanceof Throwable ? code($stray) : (string) json_encode($stray),
+);
+$strayRaised = raised(fn () => $client->site()->confirmVerification($unknown));
+check(
+    'confirmVerification lève ApiException VERIFICATION_FAILED (HTTP 422)',
+    $strayRaised instanceof ApiException && $strayRaised->getErrorCode() === ErrorCode::VERIFICATION_FAILED && $strayRaised->getHttpStatus() === 422,
+    code($strayRaised),
+);
 
 echo $failures === 0 ? "\nLe SDK PHP parle correctement à l'API.\n" : "\n$failures vérification(s) en échec.\n";
 exit($failures === 0 ? 0 : 1);
