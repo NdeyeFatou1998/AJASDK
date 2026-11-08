@@ -9,6 +9,8 @@ qu'elles contenaient est dans cette version, qui est la première.
 
 ### À savoir
 
+- **L'adresse par défaut est `https://api.ajaflow.com`**, l'API d'AJA sur son propre
+  domaine : rien à configurer. `baseUrl` ne sert qu'à viser un autre environnement.
 - **L'adresse de l'API doit être en https.** Une adresse en http n'est pas acceptée, sauf
   vers un serveur de test local (localhost, réseau privé, `*.test`, `*.local`) : la clé
   d'API voyageait sinon en clair.

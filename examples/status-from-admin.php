@@ -15,7 +15,7 @@ use Aja\ErrorCode;
 
 $aja = new Client(
     apiKey: (string) getenv('AJA_KEY'),
-    baseUrl: (string) (getenv('AJA_URL') ?: 'https://ajabackend-production.up.railway.app'),
+    baseUrl: (string) (getenv('AJA_URL') ?: 'https://api.ajaflow.com'),
 );
 
 try {

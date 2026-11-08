@@ -24,7 +24,7 @@ immédiatement.
 Le SDK vise l'API de production par défaut :
 
 ```
-https://ajabackend-production.up.railway.app
+https://api.ajaflow.com
 ```
 
 Vous n'avez donc **rien à configurer** pour démarrer. Ne surchargez `baseUrl`
@@ -70,7 +70,7 @@ use Aja\Client;
 
 $aja = new Client(
     apiKey: getenv('AJA_KEY'),
-    baseUrl: getenv('AJA_URL'),
+    baseUrl: (string) getenv('AJA_URL'), // vide : l'API de production
 );
 ```
 

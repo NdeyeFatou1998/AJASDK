@@ -204,7 +204,7 @@ check(
 
 // Préparation du lancement : la clé d'API voyage dans chaque requête — jamais
 // en clair vers un serveur public. Mêmes libellés dans les trois SDK.
-$public = outcome(fn () => new Client('aja_test_conformance', 'http://ajabackend-production.up.railway.app'));
+$public = outcome(fn () => new Client('aja_test_conformance', 'http://api.ajaflow.com'));
 check("une adresse d'API en http vers un serveur public est refusée", $public instanceof InvalidArgumentException, $public instanceof Throwable ? get_class($public) : 'acceptée');
 $local = outcome(fn () => new Client('aja_test_conformance', 'http://localhost:8080'));
 check("en http vers la machine locale (banc d'essai), acceptée", $local instanceof Client, $local instanceof Throwable ? $local->getMessage() : 'acceptée');

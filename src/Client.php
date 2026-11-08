@@ -28,7 +28,7 @@ final class Client
     public const VERSION = '1.0.0';
     public const USER_AGENT = 'aja-php-sdk/' . self::VERSION;
 
-    private const DEFAULT_BASE_URL = 'https://ajabackend-production.up.railway.app';
+    private const DEFAULT_BASE_URL = 'https://api.ajaflow.com';
 
     private readonly string $baseUrl;
     private readonly HttpClient $http;

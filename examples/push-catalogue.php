@@ -20,7 +20,7 @@ use Aja\Money;
 
 $aja = new Client(
     apiKey: (string) getenv('AJA_KEY'),
-    baseUrl: (string) (getenv('AJA_URL') ?: 'https://ajabackend-production.up.railway.app'),
+    baseUrl: (string) (getenv('AJA_URL') ?: 'https://api.ajaflow.com'),
 );
 
 // Bump `version` every time these fields change. An edit filled against an

@@ -70,7 +70,7 @@
   <tr><td>Langage</td><td>PHP 8.1+, typé, namespace <code>Aja\</code></td></tr>
   <tr><td>HTTP</td><td>ext-curl uniquement (classe <code>CurlHttpClient</code>). Pas de Guzzle.</td></tr>
   <tr><td>Auth</td><td>Header <code>Authorization: Bearer {apiKey}</code></td></tr>
-  <tr><td>Base URL</td><td>constructeur, défaut <code>https://ajabackend-production.up.railway.app</code></td></tr>
+  <tr><td>Base URL</td><td>constructeur, défaut <code>https://api.ajaflow.com</code></td></tr>
   <tr><td>Clé</td><td>jamais loggée. Jamais envoyée au navigateur. Fichier serveur / wp-config / env.</td></tr>
   <tr><td>Types inconnus</td><td><code>pending()</code> retourne tout ; le site ignore <code>type !== order.transition</code></td></tr>
 </table>
@@ -81,7 +81,7 @@ use Aja\Dto\OrderInput;
 
 $aja = new Client(
     apiKey: getenv('AJA_KEY'),
-    baseUrl: getenv('AJA_URL') ?: 'https://ajabackend-production.up.railway.app'
+    baseUrl: getenv('AJA_URL') ?: 'https://api.ajaflow.com'
 );
 
 $aja-&gt;orders()-&gt;create(new OrderInput(
