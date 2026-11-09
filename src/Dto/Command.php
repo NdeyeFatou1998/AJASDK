@@ -60,7 +60,7 @@ final class Command
         );
     }
 
-    /** True for the catalogue types a V1 integration can safely refuse. */
+    /** True for the catalogue types an orders-only integration can safely refuse. */
     public function isProduct(): bool
     {
         return str_starts_with($this->type, 'product.');

@@ -14,11 +14,10 @@ use InvalidArgumentException;
  * The shop itself, as AJA knows it: the currency it sells in and the time
  * zone it runs in — and the proof that its server holds the key.
  *
- * La boutique est la source de vérité. Revue du 4 novembre : toute boutique
- * était créée en XOF et rien ne corrigeait. Une boutique en euros voyait ses
- * prix lus en francs CFA dans l'application, et « 15 » tapé pour 15 € y
- * devenait 0,15 €. Déclarez donc le profil quand la boutique se connecte,
- * puis à chaque synchronisation de nuit, avec le formulaire produit.
+ * La boutique est la source de vérité : AJA ne devine ni sa devise ni son
+ * fuseau. Sans profil, une boutique en euros verrait ses prix lus dans une
+ * autre devise. Déclarez donc le profil quand la boutique se connecte, puis à
+ * chaque synchronisation de nuit, avec le formulaire produit.
  */
 final class SiteApi
 {

@@ -11,12 +11,9 @@ use InvalidArgumentException;
  * currency, per ISO 4217. 1250 in EUR is 12.50 €, 15000 in XOF is 15 000 F,
  * 1250 in KWD is 1.250 KD.
  *
- * Revue du 4 novembre : le connecteur WooCommerce comptait avec le nombre de
- * décimales que la boutique choisit d'afficher (2 par défaut, même en XOF),
- * pendant que l'application, le web et les notifications divisent par
- * l'exposant ISO 4217. Une boutique XOF restée à 2 décimales envoyait
- * 15 000 F comme 1500000. La table ci-dessous est celle d'AJABACKEND
- * (src/lib/money.ts), d'AJAWEB et d'AJAMOBILE.
+ * Le nombre de décimales qu'une boutique choisit d'afficher n'y change rien :
+ * une boutique en XOF réglée sur deux décimales envoie 15000 pour 15 000 F,
+ * jamais 1500000. L'exposant vient de la devise, selon la table ci-dessous.
  *
  * Les conversions se font sur la chaîne décimale, jamais en multipliant un
  * flottant : en binaire, 1.005 vaut 1.00499999999999989…, et 1.005 × 100

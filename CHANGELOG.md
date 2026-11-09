@@ -2,10 +2,7 @@
 
 ## 1.0.0 — 2026-11-08
 
-Première version publique. Le client PHP d'AJA (`aja/sdk`) pour l'API d'AJA V2.
-
-Les numéros 2.0.0 et 2.1.0 ne sont jamais sortis : c'étaient les versions de travail d'AJA V2. Tout ce
-qu'elles contenaient est dans cette version, qui est la première.
+Première version publique. Le client PHP d'AJA (`aja/sdk`).
 
 ### À savoir
 
