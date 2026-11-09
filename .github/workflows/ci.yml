@@ -126,3 +126,15 @@ jobs:
       - name: Journal de l'API
         if: failure()
         run: cat backend/api.log
+
+  interne:
+    name: Rien d'interne dans ce qui est livré
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Aucun nom de dépôt, de document ou de revue interne
+        run: |
+          if grep -rnE 'AJABACKEND|AJAWEB|AJAMOBILE|AJACONNECTOR|AJASDK|[Cc]ontre-revue|[Rr]evue du [0-9]|lot [0-9]|ERRORS\.html|CONVENTIONS\.html|V1\.html|SECURITY\.html|github\.com/NdeyeFatou1998' src README.md composer.json; then
+            echo "Le code ou le guide livré nomme quelque chose d'interne : à retirer." >&2
+            exit 1
+          fi

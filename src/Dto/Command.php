@@ -4,12 +4,7 @@ declare(strict_types=1);
 
 namespace Aja\Dto;
 
-/**
- * One queued action the merchant asked for from the app.
- *
- * AJA cannot reach the shop, so nothing is pushed: the shop polls this queue,
- * applies the action locally, then acknowledges it.
- */
+/** One queued action the merchant asked for from the app. */
 final class Command
 {
     public const TYPE_ORDER_TRANSITION = 'order.transition';
@@ -18,19 +13,12 @@ final class Command
     public const TYPE_PRODUCT_DELETE = 'product.delete';
     public const TYPE_PRODUCT_STOCK = 'product.stock';
 
-    /**
-     * Sonde de capacité : AJA demande si ce cron sait traiter les types
-     * product.*. Ne l'acquitter positivement QUE si c'est vrai — un
-     * acquittement complaisant ouvre l'édition du catalogue au marchand, et
-     * ses modifications se perdront ensuite sans que personne ne sache.
-     */
+    /** Sonde de capacité : AJA demande si ce cron sait traiter les types product.*. */
     public const TYPE_PRODUCT_PROBE = 'product.probe';
 
     /**
      * @param array<string,mixed> $payload
-     * @param ?string             $externalId null for a product.create — the
-     *                                        shop attributes the id itself and
-     *                                        returns it in the ack
+     * @param ?string $externalId
      */
     public function __construct(
         public readonly string $id,
@@ -76,9 +64,6 @@ final class Command
 
     /**
      * Fields to write, for a product.create or product.update.
-     *
-     * Keys are the shop's own, as declared in its schema — AJA never renames
-     * or invents one.
      *
      * @return array<string,mixed>
      */

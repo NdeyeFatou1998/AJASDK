@@ -6,19 +6,7 @@ namespace Aja;
 
 use InvalidArgumentException;
 
-/**
- * Amounts as AJA carries them: integers in the smallest unit of their
- * currency, per ISO 4217. 1250 in EUR is 12.50 €, 15000 in XOF is 15 000 F,
- * 1250 in KWD is 1.250 KD.
- *
- * Le nombre de décimales qu'une boutique choisit d'afficher n'y change rien :
- * une boutique en XOF réglée sur deux décimales envoie 15000 pour 15 000 F,
- * jamais 1500000. L'exposant vient de la devise, selon la table ci-dessous.
- *
- * Les conversions se font sur la chaîne décimale, jamais en multipliant un
- * flottant : en binaire, 1.005 vaut 1.00499999999999989…, et 1.005 × 100
- * tronqué donne 100 au lieu de 101.
- */
+/** Amounts as AJA carries them: integers in the smallest unit of their currency, per ISO 4217. */
 final class Money
 {
     /** Currencies with no minor unit in use (exponent 0). */
@@ -47,13 +35,7 @@ final class Money
     /**
      * A decimal amount — "12.50", "15000", 12.5 — as the integer AJA expects.
      *
-     * Rounds half up, away from zero, when the source has more decimals than
-     * the currency: "12.505" EUR is 1251, "-3.105" EUR is -311. An empty
-     * string or null is no amount at all and stays null — a missing promo
-     * price is not a free one.
-     *
-     * @throws InvalidArgumentException when the value is not a plain decimal
-     *                                  ("12,50", "1e3"), or too large for an int
+     * @throws InvalidArgumentException
      */
     public static function toMinor(int|float|string|null $amount, string $currency): ?int
     {
@@ -64,9 +46,6 @@ final class Money
             if (!is_finite($amount)) {
                 throw new InvalidArgumentException('amount must be a finite number');
             }
-            // Dix décimales gardent tout ce qu'un prix porte et laissent le
-            // bruit binaire derrière : 1.005 s'écrit 1.0050000000. Le format
-            // F ne dépend ni de la locale ni du réglage precision de PHP.
             $text = sprintf('%.10F', $amount);
         } else {
             $text = trim((string) $amount);
@@ -87,7 +66,6 @@ final class Money
         $exponent = self::exponent($currency);
         $fraction = $parts[3] ?? '';
         $digits = $parts[2] . substr(str_pad($fraction, $exponent, '0'), 0, $exponent);
-        // Le premier chiffre écarté décide seul : 5 ou plus, on monte.
         if (strlen($fraction) > $exponent && $fraction[$exponent] >= '5') {
             $digits = self::increment($digits);
         }
@@ -96,14 +74,10 @@ final class Money
     }
 
     /**
-     * AJA's integer back to the decimal string a shop stores, with exactly as
-     * many decimals as the currency has: 1250 EUR is "12.50", 15000 XOF is
-     * "15000", 1250 KWD is "1.250". No amount (null or "") is "".
+     * AJA's integer back to the decimal string a shop stores, with exactly as many decimals as the
+     * currency has: 1250 EUR is "12.50", 15000 XOF is "15000", 1250 KWD is "1.250".
      *
-     * Accepts what a decoded JSON payload holds: an int, a float with no
-     * fraction (1250.0), or a string of digits.
-     *
-     * @throws InvalidArgumentException when the value is not a whole number of minor units
+     * @throws InvalidArgumentException
      */
     public static function fromMinor(int|float|string|null $minor, string $currency): string
     {
@@ -159,7 +133,9 @@ final class Money
         return $digits;
     }
 
-    /** @throws InvalidArgumentException beyond PHP_INT_MAX, where (int) would silently clamp */
+    /**
+     * @throws InvalidArgumentException
+     */
     private static function toInt(bool $negative, string $digits): int
     {
         $digits = ltrim($digits, '0');

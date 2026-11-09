@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace Aja\Exception;
 
-/**
- * AJA answered with an error envelope: {error:{code,message,details},request_id}.
- * Switch on getErrorCode(); never show getMessage() to a shopper — it is English
- * and meant for logs.
- */
+/** AJA answered with an error envelope: {error:{code,message,details},request_id}. */
 class ApiException extends AjaException
 {
-    /** @param array<string,mixed> $details */
+    /**
+     * @param array<string,mixed> $details
+     */
     public function __construct(
         private readonly int $httpStatus,
         private readonly string $errorCode,
@@ -27,7 +25,7 @@ class ApiException extends AjaException
         return $this->httpStatus;
     }
 
-    /** Catalogue code, e.g. ErrorCode::ORDER_NOT_FOUND. */
+    /** Catalogue code, e.g. */
     public function getErrorCode(): string
     {
         return $this->errorCode;
@@ -39,7 +37,9 @@ class ApiException extends AjaException
         return $this->requestId;
     }
 
-    /** @return array<string,mixed> */
+    /**
+     * @return array<string,mixed>
+     */
     public function getDetails(): array
     {
         return $this->details;

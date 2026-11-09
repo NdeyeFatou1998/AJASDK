@@ -6,10 +6,7 @@ namespace Aja\Exception;
 
 use RuntimeException;
 
-/**
- * Base class for every failure the SDK raises.
- * Integrators can catch this one to guard a checkout in a single block.
- */
+/** Base class for every failure the SDK raises. */
 abstract class AjaException extends RuntimeException
 {
 }

@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace Aja\Exception;
 
-/**
- * The payload was rejected by AJA (code VALIDATION).
- * fields() maps each offending JSON field to its reason.
- */
+/** The payload was rejected by AJA (code VALIDATION). */
 final class ValidationException extends ApiException
 {
-    /** @return array<string,string> */
+    /**
+     * @return array<string,string>
+     */
     public function fields(): array
     {
         $fields = $this->getDetails()['fields'] ?? [];

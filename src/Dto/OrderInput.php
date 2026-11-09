@@ -7,25 +7,17 @@ namespace Aja\Dto;
 use Aja\Payment;
 use InvalidArgumentException;
 
-/**
- * One order as the shop knows it, ready for POST /v1/orders.
- *
- * Amounts are integers in the smallest unit of the currency, per ISO 4217 —
- * never the number of decimals the shop chooses to display. XOF has none, so
- * a 15 000 F order is 15000; EUR has two, so 12,50 € is 1250. Money::toMinor()
- * converts the shop's decimal string. Never pass a float: JSON floats lose
- * precision and the backend rejects them.
- */
+/** One order as the shop knows it, ready for POST /v1/orders. */
 final class OrderInput
 {
     /** Wire value, after the shop's own vocabulary has been translated. */
     private readonly string $resolvedPaymentStatus;
 
     /**
-     * @param list<string>                                           $allowedNext
-     * @param array{name?:?string,phone?:?string,email?:?string}     $customer
+     * @param list<string> $allowedNext
+     * @param array{name?:?string,phone?:?string,email?:?string} $customer
      * @param list<array{name:string,quantity:int,unit_price:int,extras?:array<string,mixed>}> $lines
-     * @param array<string,mixed>                                    $extras
+     * @param array<string,mixed> $extras
      */
     public function __construct(
         public readonly string $externalId,
@@ -39,8 +31,6 @@ final class OrderInput
         public readonly array $lines,
         public readonly array $extras = [],
     ) {
-        // Local guards only for mistakes the backend would reject anyway;
-        // catching them here keeps a broken checkout out of the HTTP path.
         if ($externalId === '') {
             throw new InvalidArgumentException('externalId must not be empty');
         }
@@ -55,9 +45,6 @@ final class OrderInput
         if ($name === '' && $phone === '') {
             throw new InvalidArgumentException('customer needs a name or a phone');
         }
-        // Shops name payments their own way, often in French. Translate here so
-        // a generic VALIDATION does not come back from the server a round trip
-        // later.
         $resolved = Payment::resolve($paymentStatus);
         if ($resolved === null) {
             throw new InvalidArgumentException(sprintf(
@@ -88,7 +75,6 @@ final class OrderInput
             'total' => $this->total,
             'currency' => $this->currency,
             'customer' => $this->customer,
-            // Un tableau vide s'encode en [] ; l'API attend un objet par ligne.
             'lines' => array_map(
                 static fn (array $line): array => array_key_exists('extras', $line)
                     ? ['extras' => (object) $line['extras']] + $line

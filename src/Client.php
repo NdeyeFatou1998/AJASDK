@@ -16,13 +16,7 @@ use Aja\Exception\ValidationException;
 use Aja\Http\CurlHttpClient;
 use Aja\Http\HttpClient;
 
-/**
- * Entry point. Holds the key and the retry policy; the Api classes only
- * describe routes.
- *
- * The shop always calls AJA — there is no inbound traffic to receive, so this
- * client has no server, no webhook and no listener.
- */
+/** Entry point. */
 final class Client
 {
     public const VERSION = '1.0.0';
@@ -54,9 +48,7 @@ final class Client
     }
 
     /**
-     * The API key travels in every request: never in clear text to a public
-     * server. http is accepted only for a local test server (localhost, a
-     * private network address, *.test, *.local, host.docker.internal).
+     * The API key travels in every request: never in clear text to a public server.
      *
      * @throws InvalidArgumentException
      */
@@ -114,10 +106,8 @@ final class Client
      * Perform one API call, applying the retry policy.
      *
      * @param array<string,mixed>|null $body
-     * @param array<string,string>     $query
-     *
-     * @return array<string,mixed> decoded JSON, or [] for 204 responses
-     *
+     * @param array<string,string> $query
+     * @return array<string,mixed>
      * @throws ApiException|NetworkException
      */
     public function send(
@@ -165,7 +155,9 @@ final class Client
                 return [];
             }
 
-            /** @var array<string,mixed>|null $decoded */
+            /**
+             * @var array<string,mixed>|null $decoded
+             */
             $decoded = json_decode($response->body, true);
 
             if ($response->status >= 200 && $response->status < 300) {

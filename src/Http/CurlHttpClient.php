@@ -7,10 +7,7 @@ namespace Aja\Http;
 use Aja\Exception\NetworkException;
 use CurlHandle;
 
-/**
- * ext-curl transport. Deliberately the only HTTP dependency: shops on shared
- * hosting cannot always install Guzzle, and the connector vendors this folder.
- */
+/** ext-curl transport. */
 final class CurlHttpClient implements HttpClient
 {
     public function __construct(
@@ -21,7 +18,6 @@ final class CurlHttpClient implements HttpClient
 
     /**
      * @param array<string,string> $headers
-     *
      * @throws NetworkException
      */
     public function request(
@@ -62,8 +58,6 @@ final class CurlHttpClient implements HttpClient
         curl_close($handle);
 
         if ($errno !== 0 || !is_string($raw)) {
-            // Never interpolate the URL: it is safe, but the key lives in a header
-            // and we keep transport logs free of anything request-shaped.
             throw new NetworkException(sprintf('curl error %d: %s', $errno, $error));
         }
 

@@ -6,28 +6,19 @@ namespace Aja\Http;
 
 use Aja\Exception\NetworkException;
 
-/**
- * Transport seam. Exists so tests can drive the SDK without a network,
- * and so a host (WordPress) may swap in its own HTTP stack later.
- */
+/** Transport seam. */
 interface HttpClient
 {
     /**
      * @param array<string,string> $headers
-     *
-     * @throws NetworkException when no HTTP response could be obtained
+     * @throws NetworkException
      */
     public function request(
         string $method,
         string $url,
         array $headers,
         ?string $body = null,
-        /**
-         * Délai total pour CET appel, en secondes.
-         *
-         * Le long polling demande au serveur de tenir la requête : un délai
-         * client figé plus court tuerait la requête qu'on vient de demander.
-         */
+        /** Délai total pour CET appel, en secondes. */
         ?int $timeoutSeconds = null,
     ): HttpResponse;
 }

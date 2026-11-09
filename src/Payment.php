@@ -6,17 +6,7 @@ namespace Aja;
 
 use InvalidArgumentException;
 
-/**
- * Payment vocabulary translation.
- *
- * The wire format is frozen at four values, but shops name things their own
- * way — often in French. Rather than force every integrator to hand-write a
- * mapping, the SDK ships a table of common synonyms and lets a shop extend it
- * once at start-up with registerAliases().
- *
- * This table is generated from the Node SDK's source so the three clients
- * never drift apart.
- */
+/** Payment vocabulary translation. */
 final class Payment
 {
     /** The only payment states the API accepts. */
@@ -25,17 +15,9 @@ final class Payment
     /**
      * Synonyms the SDK resolves on its own.
      *
-     * Two entries are judgement calls rather than translations, and both lean
-     * the safe way:
-     *   - partially_paid -> pending: money is not fully in, so do not tell the
-     *     merchant the order is paid and shippable.
-     *   - partially_refunded -> paid: the order *was* paid. Calling it refunded
-     *     would drop it out of the merchant's "paid only" statistics entirely.
-     *
      * @var array<string,string>
      */
     private const BUILT_IN = [
-        // --- pending ---
         'pending' => 'pending',
         'unpaid' => 'pending',
         'not_paid' => 'pending',
@@ -59,7 +41,6 @@ final class Payment
         'partiellement_paye' => 'pending',
         'paiement_partiel' => 'pending',
         'acompte' => 'pending',
-        // --- paid ---
         'paid' => 'paid',
         'captured' => 'paid',
         'completed' => 'paid',
@@ -76,7 +57,6 @@ final class Payment
         'paiement_valide' => 'paid',
         'partiellement_rembourse' => 'paid',
         'remboursement_partiel' => 'paid',
-        // --- failed ---
         'failed' => 'failed',
         'declined' => 'failed',
         'rejected' => 'failed',
@@ -88,7 +68,6 @@ final class Payment
         'rejete' => 'failed',
         'erreur' => 'failed',
         'expire' => 'failed',
-        // --- refunded ---
         'refunded' => 'refunded',
         'chargeback' => 'refunded',
         'reversed' => 'refunded',
@@ -97,20 +76,19 @@ final class Payment
         'avoir' => 'refunded',
     ];
 
-    /** @var array<string,string> */
+    /**
+     * @var array<string,string>
+     */
     private static array $custom = [];
 
     /**
-     * Fold a label into a comparable key: lowercase, accents removed, any
-     * separator collapsed to "_". So "Partiellement Payé",
-     * "partiellement-paye" and "PARTIALLY_PAID" all reach the same entry.
+     * Fold a label into a comparable key: lowercase, accents removed, any separator collapsed to
+     * "_".
      */
     public static function foldLabel(string $value): string
     {
         $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
         if ($ascii === false) {
-            // iconv is not guaranteed on every shared host; fall back to the
-            // accents a French or English shop actually uses.
             $ascii = strtr($value, [
                 'à' => 'a', 'â' => 'a', 'ä' => 'a', 'á' => 'a',
                 'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
@@ -130,10 +108,6 @@ final class Payment
     /**
      * Teach the SDK your own payment vocabulary, once, at start-up.
      *
-     * Keys are matched loosely (case, accents and separators are ignored).
-     * Registering a key that already exists overrides the built-in meaning,
-     * which is how a shop disagrees with the defaults above.
-     *
      * @param array<string,string> $aliases
      */
     public static function registerAliases(array $aliases): void
@@ -151,16 +125,13 @@ final class Payment
         }
     }
 
-    /** Forget every registered alias. Mostly useful in tests. */
+    /** Forget every registered alias. */
     public static function clearAliases(): void
     {
         self::$custom = [];
     }
 
-    /**
-     * Translate a shop's own label into one of the four API values.
-     * Returns null when nothing matches, so the caller decides how loudly to fail.
-     */
+    /** Translate a shop's own label into one of the four API values. */
     public static function resolve(string $value): ?string
     {
         $key = self::foldLabel($value);
