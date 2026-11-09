@@ -8,9 +8,9 @@ declare(strict_types=1);
  * AJA cannot reach your server, so this script comes to collect the actions
  * the merchant took in the mobile app.
  *
- * V2 adds four product types to the same queue, plus a probe. There is no
- * second cron to write: a V1 integration grows a few branches in the match
- * below, and one that does not want the catalogue simply keeps refusing them.
+ * The same queue carries four product types, plus a probe. There is no
+ * second cron to write: an integration that handles the catalogue adds a few
+ * branches in the match below, and one that does not simply refuses them.
  *
  * Le long polling : `pending(wait: 20)` demande à AJA de tenir la requête
  * jusqu'à ce qu'une action arrive, au lieu de répondre vide tout de suite. La
