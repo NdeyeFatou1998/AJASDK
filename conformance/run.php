@@ -260,6 +260,18 @@ check(
         && $verificationFailed->getHttpStatus() === 422 && count($wire->calls) === 1 && !ErrorCode::isRetryable(ErrorCode::VERIFICATION_FAILED),
     code($verificationFailed) . ', ' . count($wire->calls) . ' appel(s)',
 );
+$waiting = [
+    ErrorCode::SITE_NOT_VERIFIED,
+    ErrorCode::SITE_IP_NOT_CONFIRMED,
+    ErrorCode::COMMAND_UNSUPPORTED_TYPE,
+    ErrorCode::ORDER_TRANSITION_NOT_ALLOWED,
+];
+$retried = array_values(array_filter($waiting, fn (string $c) => ErrorCode::isRetryable($c)));
+check(
+    'les refus qui attendent le marchand ou le site (pas prouvé, adresse IP non confirmée, type inconnu, transition interdite) ne se réessaient jamais',
+    $retried === [],
+    $retried === [] ? 'aucun réessayé' : implode(', ', $retried),
+);
 $wire = new Wire([new HttpResponse(401, '{"error":{"code":"SITE_KEY_INVALID","message":"invalid key"}}')]);
 $offline = new Client('aja_test_conformance', 'http://aja.test', $wire, 3, 0);
 $badKey = raised(fn () => $offline->site()->handleWake(['aja_verify' => $CODE]));
