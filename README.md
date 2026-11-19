@@ -97,8 +97,8 @@ foreach ($aja->commands()->pending() as $command) {
 
 ## Documentation
 
-Le guide complet (profil de la boutique, catalogue, montants, erreurs, mise en service) est dans votre espace marchand AJA :
-https://www.ajaflow.com/app/documentation
+Le guide complet (profil de la boutique, catalogue, montants, erreurs, mise en service) se lit sans compte :
+https://www.ajaflow.com/documentation
 
 ## Licence
 
