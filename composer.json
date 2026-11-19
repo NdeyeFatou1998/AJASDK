@@ -1,5 +1,5 @@
 {
-  "name": "aja/sdk",
+  "name": "ajaflow/sdk",
   "description": "PHP client for the AJA order API: the shop sends its orders and polls the merchant's actions.",
   "type": "library",
   "license": "MIT",

@@ -2,7 +2,7 @@
 
 ## 1.0.0 — 2026-11-19
 
-Première version publique. Le client PHP d'AJA (`aja/sdk`).
+Première version publique. Le client PHP d'AJA (`ajaflow/sdk`).
 
 ### À savoir
 

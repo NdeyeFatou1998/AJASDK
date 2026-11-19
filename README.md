@@ -1,14 +1,14 @@
-# aja/sdk — SDK PHP d'AJA
+# ajaflow/sdk — SDK PHP d’AJA
 
 Relie une boutique en ligne à AJA : ses commandes arrivent sur le téléphone du marchand, et les statuts qu'il change reviennent à la boutique.
 
 ## Installation
 
 ```bash
-composer require aja/sdk
+composer require ajaflow/sdk
 ```
 
-PHP 8.1 ou plus, avec les extensions curl et json. Aucune autre dépendance.
+PHP 8.1 ou plus, avec les extensions curl et json. Aucune autre dépendance. Le paquet s'installe sous le nom `ajaflow/sdk` ; ses classes sont dans l'espace de noms `Aja\` (`use Aja\Client;`).
 
 ## La clé
 
