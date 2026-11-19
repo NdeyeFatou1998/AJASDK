@@ -1,11 +1,17 @@
 # Changelog
 
-## 1.0.0 — 2026-11-08
+## 1.0.0 — 2026-11-19
 
 Première version publique. Le client PHP d'AJA (`aja/sdk`).
 
 ### À savoir
 
+- **Brancher son site se fait une fois** : une adresse de réveil sur le domaine indiqué dans
+  AJA, puis le profil de la boutique au démarrage ; le domaine se prouve alors tout seul
+  (README, « Brancher votre site »).
+- **Quatre refus ne se réessaient jamais** : `SITE_NOT_VERIFIED` (le domaine n'est pas encore
+  prouvé), `SITE_IP_NOT_CONFIRMED`, `COMMAND_UNSUPPORTED_TYPE`, `ORDER_TRANSITION_NOT_ALLOWED`.
+  Ils attendent un geste du marchand ou du site, pas une nouvelle tentative.
 - **L'adresse par défaut est `https://api.ajaflow.com`**, l'API d'AJA sur son propre
   domaine : rien à configurer. `baseUrl` ne sert qu'à viser un autre environnement.
 - **L'adresse de l'API doit être en https.** Une adresse en http n'est pas acceptée, sauf
