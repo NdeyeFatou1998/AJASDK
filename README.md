@@ -20,6 +20,28 @@ use Aja\Client;
 $aja = new Client(apiKey: getenv('AJA_KEY'));
 ```
 
+## Brancher votre site (une fois)
+
+Tant que ces deux étapes ne sont pas faites, AJA refuse les commandes de votre site (`SITE_NOT_VERIFIED`) et la page de votre boutique reste « en attente ».
+
+**1. Une adresse de réveil.** Une route publique, en https, sur le domaine exact que vous avez indiqué dans AJA (`api.maboutique.sn` si votre serveur est séparé de la vitrine ; « www. » ne compte pas). Une adresse sur un autre domaine est refusée (`domain_mismatch`). AJA l'appelle pour vérifier que ce domaine est bien le vôtre, puis à chaque décision du marchand. Répondez tout de suite : AJA n'attend que quelques secondes. Travaillez ensuite.
+
+```php
+// aja-wake.php, publié à https://api.maboutique.sn/aja-wake.php
+http_response_code(204);
+if (function_exists('fastcgi_finish_request')) {
+    fastcgi_finish_request();             // répondre d'abord
+}
+$aja->site()->handleWake($_GET);          // renvoie le code si AJA vérifie le domaine
+appliquerLesDecisions($aja);              // voir plus bas
+```
+
+**2. Se présenter à AJA**, au démarrage de votre serveur : la devise, le fuseau horaire et l'adresse de réveil. AJA appelle aussitôt cette adresse, votre site lui renvoie le code, et le domaine est prouvé, sans rien d'autre à faire.
+
+```php
+$aja->site()->putProfile('XOF', 'Africa/Dakar', 'https://api.maboutique.sn/aja-wake.php');
+```
+
 ## Envoyer une commande
 
 Juste après l'enregistrement de la commande chez vous. Une panne d'AJA ne doit jamais bloquer la vente.
@@ -49,7 +71,7 @@ try {
 
 ## Appliquer les décisions du marchand
 
-Chaque minute, avec une tâche planifiée :
+Ce code est votre `appliquerLesDecisions($aja)` : l'adresse de réveil l'appelle à chaque décision du marchand. Une tâche planifiée chaque minute reste un filet de sécurité, si un appel d'AJA se perd :
 
 ```bash
 * * * * * php /var/www/aja-poll.php
